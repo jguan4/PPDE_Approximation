@@ -1,2 +1,3 @@
 Log/*
 __pycache__/*
+Optimizers/train_Newton.py

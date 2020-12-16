@@ -14,8 +14,8 @@ from .utils import *
 
 
 def compute_W_b_update(net, JJ_W, JJ_b, grads_W_list, grads_b_list, mu):
-	grads_W_tol = grads_W_list #tf.math.reduce_sum(grads_W_list,axis=0)
-	grads_b_tol = grads_b_list #tf.math.reduce_sum(grads_b_list,axis=0)
+	grads_W_tol = grads_W_list 
+	grads_b_tol = grads_b_list 
 
 	JJ_W = JJ_W+(mu+net.regular_alphas[0])*tf.eye(net.weights_len)#W_reg_matrix
 	JJ_b = JJ_b+(mu+net.regular_alphas[0])*tf.eye(net.biases_len)
@@ -23,15 +23,12 @@ def compute_W_b_update(net, JJ_W, JJ_b, grads_W_list, grads_b_list, mu):
 	b_update_tol = tf.linalg.solve(JJ_b, grads_b_tol)#/(np.sum(num_batches)*net.weights_len))
 
 	return W_update_tol, b_update_tol
-	# return W_update_list, b_update_list
 
 def compute_matrix_cond(A):
 	s = tf.linalg.svd(A, full_matrices=False, compute_uv=False)
 	cond = s[0]/s[-1]
 	return cond
 
-
-# def construct_tol_Jacobian(net, Xs_list, us_list, batch_lim = 300):
 def construct_tol_Jacobian(net, samples_list, batch_lim):
 
 	JJ_W = tf.zeros([net.weights_len, net.weights_len])
@@ -69,7 +66,6 @@ def construct_tol_Jacobian(net, samples_list, batch_lim):
 			Je_W = Je_W + Je_W1
 			Je_b = Je_b + Je_b1
 			
-			# print("Finishing the {0} indexed batch...".format(i))
 		else:
 			x_i = sample_i["x_tf"]
 			y_i = sample_i["y_tf"]
@@ -77,8 +73,7 @@ def construct_tol_Jacobian(net, samples_list, batch_lim):
 			xi_i = sample_i["xi_tf"]
 			output_i = sample_i["target"]
 			N = sample_i["N"]
-			# if net.name == "RNN":
-			# 	init_i = sample_i["init"]
+
 			for j in range(tf.dtypes.cast(N_int/batch_lim, tf.int32)):
 				start_ind = j*batch_lim
 				end_ind = tf.dtypes.cast(tf.math.minimum(N_int, (j+1)*batch_lim), tf.int32)
@@ -87,16 +82,6 @@ def construct_tol_Jacobian(net, samples_list, batch_lim):
 				y_batch = y_i[start_ind:end_ind, 0:1]
 				t_batch = t_i[start_ind:end_ind, 0:1]
 				xi_batch = xi_i[start_ind:end_ind, 0::]
-				# if net.name == "RNN":
-					# init_batch = init_i[start_ind:end_ind, 0:1]
-				# Xs_batch_list = []
-				# for z in range(len(input_i)):
-					# x_i = input_i[z]
-					# Xs_batch_list.append(tf.Variable(x_i[start_ind:end_ind,0:1], trainable = False, name = "batch_{0}".format(z)))
-				# if net.name == "RNN":
-					# samples_i_dict = {"type":Ntr_name_i, "output":us_batch, "input":Xs_batch_list, "init":init_batch}
-				# else:
-					# samples_i_dict = {"type":Ntr_name_i, "output":us_batch, "input":Xs_batch_list}
 
 				if Ntr_name_i == "Res":
 					jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_residual(x_batch, y_batch, t_batch, xi_batch, target, N)
@@ -112,12 +97,6 @@ def construct_tol_Jacobian(net, samples_list, batch_lim):
 				JJ_b = JJ_b + JJ_b1
 				Je_W = Je_W + Je_W1
 				Je_b = Je_b + Je_b1
-				# del tape_loss
-
-				# print("Finishing {0} out of {1} of {2} indexed batch...".format(end_ind, sample_i["N"] ,i))
-			# JJ_W_list.append(JJ_W)
-			# JJ_b_list.append(JJ_b)
-	# return JJ_W_list, JJ_b_list
 
 	return JJ_W, JJ_b, Je_W, Je_b
 

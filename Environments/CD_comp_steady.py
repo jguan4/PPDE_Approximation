@@ -109,8 +109,6 @@ class CD_comp_steady:
 					self.generate_one_sol(p)
 				np.save(self.path_env+"{1}_POD_{0}.npy".format(self.N_p_train,self.name), self.u_samples)
 			return [self.mu_mat_train.T, self.u_samples]
-		# elif self.sampling_method == 1 or self.sampling_method == 2:
-		# 	return self.generate_PINN_samples()
 		elif self.sampling_method == 3:
 			return self.generate_RNN_samples()
 
@@ -488,8 +486,6 @@ class CD_comp_steady:
 			f_res_grid = tf.reshape(f_res, (self.N_p_test,self.N,self.N))
 			
 		err_grid = u_test_grid-u_test_p_grid
-			# inputs_range = self.select_region(N_test.numpy(),f_res_val,3,1e-3)
-
 		err_test = tf.math.reduce_mean(tf.square(err_grid))
 
 		relative_err_vec = tf.norm(err_grid,axis=[1,2])/tf.norm(u_test_grid,axis=[1,2])
@@ -539,42 +535,6 @@ class CD_comp_steady:
 			ax2.set_zlabel('u')
 			ax2.set_title('Error')
 			plt.show()
-			# fig = plt.figure(figsize=plt.figaspect(0.5))
-			# fig, ax = plt.subplots()
-			# ax = fig.add_subplot(1, 2, 1)
-			# ax = fig.add_subplot(1, 1, 1)
-			# ax.plot(self.x, u_test_p_i, color ="red")
-			# ax.plot(self.x, u_test_i)
-			# ax.set_xlabel(r'$x$')
-			# ax.set_ylabel(r'$u$')
-			# fig.suptitle(r"$\xi$ = {0}".format(xi)))
-			# if figure_save_path is not None:
-				# plt.savefig("{1}/u_xi_{0}.png".format(xi,folder_path))
-				# plt.cla()
-				# plt.clf()
-				# plt.close()
-			# else:
-				# plt.show()
-
-			# fig1, ax1 = plt.subplots()
-			# fig1 = plt.figure(2)
-			# ax1 = fig.add_subplot(1, 2, 2)
-			# ax1 = fig1.add_subplot(1, 1, 1)
-			# ax1 = fig1.gca(projection='3d')
-			# ax1.plot(self.x,f_res_i)
-			# ax1.set_xlabel(r'$x$')
-			# ax1.set_ylabel(r'$f(u,\xi)$')
-			# fig1.suptitle(r"$\xi$ = {0}".format(xi))
-			# if figure_save_path is not None:
-				# plt.savefig("{1}/f_xi_{0}.png".format(xi,folder_path))
-				# plt.close()
-				# plt.cla()
-				# plt.clf()
-			# else:
-				# plt.show()
-			# ax1.semilogy(self.x, np.abs(u_test_p_i-u_test_i))
-			# plt.show()
-
 
 	@tf.function
 	def f_res(self, x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy):

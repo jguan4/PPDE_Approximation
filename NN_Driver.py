@@ -74,7 +74,6 @@ class NN_Driver:
 		self.output_size = self.env.output_space_size
 		if self.sampling_method == 0:
 			self.output_size = self.L
-		# self.var_list = self.env.var_list
 		self.initialize_net()
 		self.process_training_samples()
 
@@ -129,7 +128,6 @@ class NN_Driver:
 				self.net.load_weights_biases(self.path_weight)
 		else:
 			self.net.load_weights_biases(path)
-		# self.net.load_weights_biases(self.path_weight)
 
 	def plot_test(self, figure_path = None):
 		self.env.plot_NN(self.net, figure_path)

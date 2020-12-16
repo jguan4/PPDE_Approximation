@@ -11,7 +11,6 @@ import csv
 
 class Poisson_1D:
 	def __init__(self, N_p_train, N_p_test, h, inner = False, sampling_method = 0, path_env = "./Environments/", L = 0):
-		# self.N_p = N_p
 		self.name = "Poisson"
 		self.sampling_method = sampling_method
 		self.u_dim = 1
@@ -99,8 +98,6 @@ class Poisson_1D:
 					self.generate_one_sol(p)
 				np.save(self.path_env+"{1}_POD_{0}.npy".format(self.N_p_train,self.name), self.u_samples)
 			return [self.mu_mat_train.T, self.u_samples]
-		# elif self.sampling_method == 1 or self.sampling_method == 2:
-		# 	return self.generate_PINN_samples()
 		elif self.sampling_method == 3:
 			return self.generate_RNN_samples()
 
@@ -164,7 +161,6 @@ class Poisson_1D:
 				self.N0_samples = np.concatenate((self.N0_samples, X_f),axis = 0) if self.N0_samples.size else X_f
 				self.u0_samples = np.concatenate((self.u0_samples,u),axis = 0) if self.u0_samples.size else u
 			else:
-				# u_tol = self.fill_BC(u, p)
 				X_0 = self.create_tol_X(p)
 				u_tol = u.reshape((self.N,1))
 				self.N0_tests = np.concatenate((self.N0_tests, X_0),axis = 0) if self.N0_tests.size else X_0
@@ -297,10 +293,6 @@ class Poisson_1D:
 	def test_NN(self, net, record_path = None):
 		if record_path is not None:
 			if os.path.exists(record_path):
-				# rel_errs = np.loadtxt(record_path, delimiter="\n")
-				# rel_errs = rel_errs.tolist()
-				# if isinstance(rel_errs, float):
-				# 	rel_errs = [rel_errs]
 				pass
 			else:
 				with open(record_path, mode='w') as record:
@@ -330,8 +322,6 @@ class Poisson_1D:
 			f_res_grid = tf.reshape(f_res, (self.N_p_test,self.N))
 			
 		err_grid = u_test_grid-u_test_p_grid
-			# inputs_range = self.select_region(N_test.numpy(),f_res_val,3,1e-3)
-
 		err_test = tf.math.reduce_mean(tf.square(err_grid))
 
 		relative_err_vec = tf.norm(err_grid,axis=1)/tf.norm(u_test_grid,axis=1)
@@ -341,8 +331,6 @@ class Poisson_1D:
 			with open(record_path, 'a') as f:
 				writer = csv.writer(f)
 				writer.writerow(list_info)
-			# rel_errs.append(rel_err_test.numpy())
-			# np.savetxt(record_path, rel_errs, delimiter =", ", fmt ='% s') 
 		print("Test average error is: {0}\nRelative error is: {1}".format(err_test.numpy(), rel_err_test.numpy()))
 
 		return u_test_grid, u_test_p_grid, err_test, rel_err_test, f_res_grid
@@ -363,40 +351,12 @@ class Poisson_1D:
 			# 	if not os.path.exists(folder_path):
 			# 	    os.makedirs(folder_path)
 			# scipy.io.savemat(folder_path+"/data.mat", {'true_solution':u_test_i, 'approximation': u_test_p_i, 'residual':f_res_i})
-			# fig = plt.figure(figsize=plt.figaspect(0.5))
+
 			fig, ax = plt.subplots()
-			# ax = fig.add_subplot(1, 2, 1)
-			ax = fig.add_subplot(1, 1, 1)
 			ax.plot(self.x, u_test_p_i, color ="red")
 			ax.plot(self.x, u_test_i)
 			ax.set_xlabel(r'$x$')
 			ax.set_ylabel(r'$u$')
-			# fig.suptitle(r"$\xi$ = {0}".format(xi)))
-			# if figure_save_path is not None:
-				# plt.savefig("{1}/u_xi_{0}.png".format(xi,folder_path))
-				# plt.cla()
-				# plt.clf()
-				# plt.close()
-			# else:
-				# plt.show()
-
-			# fig1, ax1 = plt.subplots()
-			# fig1 = plt.figure(2)
-			# ax1 = fig.add_subplot(1, 2, 2)
-			# ax1 = fig1.add_subplot(1, 1, 1)
-			# ax1 = fig1.gca(projection='3d')
-			# ax1.plot(self.x,f_res_i)
-			# ax1.set_xlabel(r'$x$')
-			# ax1.set_ylabel(r'$f(u,\xi)$')
-			# fig1.suptitle(r"$\xi$ = {0}".format(xi))
-			# if figure_save_path is not None:
-				# plt.savefig("{1}/f_xi_{0}.png".format(xi,folder_path))
-				# plt.close()
-				# plt.cla()
-				# plt.clf()
-			# else:
-				# plt.show()
-			# ax1.semilogy(self.x, np.abs(u_test_p_i-u_test_i))
 			plt.show()
 
 	@tf.function

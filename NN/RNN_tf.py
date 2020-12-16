@@ -20,7 +20,6 @@ class RNN_tf:
 		self.p_dim = self.env.p_dim
 		self.x_disc = tf.constant(self.env.x_disc, dtype = tf.float32)
 		self.h_init = tf.constant(self.env.h_init,dtype = tf.float32)
-		# self.h_init = tf.constant(self.env.h_init, dtype = tf.float32)
 		self.layers = layers
 		self.Ntr = Ntr
 		self.Ntr_t = Ntr_t
@@ -182,17 +181,13 @@ class RNN_tf:
 				f_u = f_res*np.sqrt(self.type_weighting[0]/N)
 				loss_f = tf.math.reduce_sum(f_u**2)/2
 				loss_val = loss_val + loss_f
-				# if save_toggle:
-				# 	self.loss_f_list.append(loss_f.numpy())
 
 			elif name_i == "B_D":
 				err_do = self.compute_solution(x_tf, y_tf, t_tf, xi_tf, target)
 				err_d = err_do*np.sqrt(self.type_weighting[1]/(N))
 				loss_d = tf.math.reduce_sum(err_d**2)/2
 				loss_val = loss_val + loss_d
-				# if save_toggle:
-				# 	self.loss_b_d_list.append(loss_d.numpy())
-					
+	
 			elif name_i == "B_N":
 				err_n = self.compute_neumann(x_tf, y_tf, t_tf, xi_tf,target)
 				err_n = (err_n)*np.sqrt(self.type_weighting[2]/(N))
@@ -204,20 +199,6 @@ class RNN_tf:
 				err_0 = (err_0)*np.sqrt(self.type_weighting[3]/(N))
 				loss_0 = tf.math.reduce_sum(err_0**2)/2
 				loss_val = loss_val + loss_0
-
-				# if "CD" in self.env.name and self.env.sampling_method == 1:
-				# 	with tape_forward:
-				# 		u_11 = tape_forward.gradient(u_p, input_i[0])
-				# 		u_12 = tape_forward.gradient(u_p, input_i[1])
-				# 	u_21 = tape_forward.gradient(u_11, input_i[0])
-				# 	u_22 = tape_forward.gradient(u_12, input_i[1])
-
-				# 	xi = input_i[1]
-				# 	f0 = -u_21*xi+u_11
-				# 	f0 = f0*np.sqrt(self.type_weighting[3]/num_list[3])*1e-2
-				# 	loss_f0 = tf.math.reduce_sum(f0**2)/2
-				# 	loss_list.append(loss_f0)
-				# 	err_list.append(f0)
 
 		return loss_val
 

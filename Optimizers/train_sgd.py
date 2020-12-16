@@ -61,9 +61,6 @@ def train_sgd(net, samples_list, max_iter, tol, save_toggle, path_weight = "./te
 		loss_val_tf, grads_tol_W, grads_tol_b = net.construct_Gradient(samples_list)
 		loss_val = loss_val_tf.numpy()
 
-		# loss_val_tf, loss_list, _, tape_loss = net.loss(samples_list, net.Ntr, plot=True)
-		# loss_val_tf, _, _, tape_loss = net.loss(sample_batch_list, batch_sizes, plot=False)
-
 		gradient = tf.norm(grads_tol_W)+tf.norm(grads_tol_b)
 		gradient = gradient.numpy()
 

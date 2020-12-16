@@ -179,20 +179,6 @@ class NN_tf:
 				loss_0 = tf.math.reduce_sum(err_0**2)/2
 				loss_val = loss_val + loss_0
 
-				# if "CD" in self.env.name and self.env.sampling_method == 1:
-				# 	with tape_forward:
-				# 		u_11 = tape_forward.gradient(u_p, input_i[0])
-				# 		u_12 = tape_forward.gradient(u_p, input_i[1])
-				# 	u_21 = tape_forward.gradient(u_11, input_i[0])
-				# 	u_22 = tape_forward.gradient(u_12, input_i[1])
-
-				# 	xi = input_i[1]
-				# 	f0 = -u_21*xi+u_11
-				# 	f0 = f0*np.sqrt(self.type_weighting[3]/num_list[3])*1e-2
-				# 	loss_f0 = tf.math.reduce_sum(f0**2)/2
-				# 	loss_list.append(loss_f0)
-				# 	err_list.append(f0)
-
 		return loss_val
 
 	@tf.function

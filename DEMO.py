@@ -34,8 +34,7 @@ else:
 PATH_L = "./Log/Logs/{1}/{0}/".format(env_toggle,method_str)
 folder_path = PATH_L + "Net{6}_Layers{0}_Ntr{1}_h{2}_Reg{3}_Sample{4}_Weight{5}_Opt{7}/".format(layers, Ntr, int(1/h), regular_alphas, sampling_method, type_weighting, net_toggle, opt_toggle)
 record_path = PATH_L + "rel_errs.csv"
-print(folder_path)
-input()
+
 if train_toggle == 0:
 	save_toggle = False
 	pinn.train_nn(save_toggle)

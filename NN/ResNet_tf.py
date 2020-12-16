@@ -85,42 +85,6 @@ class ResNet_tf:
 	def xavier_init(self, size, name):
 		xavier_stddev = np.sqrt(6)/np.sqrt(np.sum(size)) #np.sqrt(2/(in_dim + out_dim))
 		return tf.Variable(tf.random.uniform(size, minval = -np.sqrt(6)/np.sqrt(np.sum(size)), maxval = np.sqrt(6)/np.sqrt(np.sum(size))), dtype=tf.float32, name = name)
-	
-	# def forward(self, Xs_tf_list):
-	# 	num_layers = len(self.weights) 
-	# 	with tf.GradientTape(persistent = True) as tape:
-	# 		tape.watch(Xs_tf_list)
-	# 		X = tf.concat(Xs_tf_list, axis = 1)
-	# 		# H = 2.0*(X - self.lb)/(self.ub - self.lb) - 1.0
-	# 		H = (X - self.lb)/(self.ub - self.lb)
-	# 		# H = X
-	# 		H = self.linear_pass(H,self.weights[0],self.biases[0],self.weights_dims[0],self.biases_dims[0])
-	# 		for l in range(1,num_layers-1):
-	# 			H = self.Res_pass(H,self.weights[l],self.biases[l],self.weights_dims[l],self.biases_dims[l])
-	# 		W = tf.reshape(self.weights[-1][0], self.weights_dims[-1][0])
-	# 		b = self.biases[-1][0]
-	# 		H = tf.matmul(H, W) + b
-	# 	return H, tape
-
-	# @tf.function
-	# def linear_pass(self, H, layer_i):
-	# 	W = tf.reshape(self.weights[layer_i][0],W_dim_list[0])
-	# 	b = b_list[0]
-	# 	H = tf.keras.activations.tanh(tf.matmul(H, W) + b)
-	# 	return H
-
-	# def Res_pass(self, H, W_list, b_list, W_dim_list, b_dim_list):
-	# 	n = len(W_list)
-	# 	X = H
-	# 	for i in range(n):
-	# 		W = tf.reshape(W_list[i],W_dim_list[i])
-	# 		b = b_list[i]
-	# 		X = tf.keras.activations.tanh(tf.matmul(X, W) + b)
-	# 	# W = tf.reshape(W_list[-1],W_dim_list[-1])
-	# 	# b = b_list[-1]
-	# 	# X = tf.matmul(X, W) + b
-	# 	Y = 0.5*X+H
-	# 	return Y
 
 	@tf.function
 	def forward(self, x_tf, y_tf, t_tf, xi_tf):
@@ -218,20 +182,6 @@ class ResNet_tf:
 				loss_0 = tf.math.reduce_sum(err_0**2)/2
 				loss_val = loss_val + loss_0
 
-				# if "CD" in self.env.name and self.env.sampling_method == 1:
-				# 	with tape_forward:
-				# 		u_11 = tape_forward.gradient(u_p, input_i[0])
-				# 		u_12 = tape_forward.gradient(u_p, input_i[1])
-				# 	u_21 = tape_forward.gradient(u_11, input_i[0])
-				# 	u_22 = tape_forward.gradient(u_12, input_i[1])
-
-				# 	xi = input_i[1]
-				# 	f0 = -u_21*xi+u_11
-				# 	f0 = f0*np.sqrt(self.type_weighting[3]/num_list[3])*1e-2
-				# 	loss_f0 = tf.math.reduce_sum(f0**2)/2
-				# 	loss_list.append(loss_f0)
-				# 	err_list.append(f0)
-
 		return loss_val
 
 
@@ -287,27 +237,6 @@ class ResNet_tf:
 		grads_tol_W = tf.transpose(tf.concat(weights_grads, axis = -1))
 		grads_tol_b = tf.transpose(tf.concat(biases_grads, axis = -1))
 		return loss_val, grads_tol_W, grads_tol_b
-
-	# @tf.function
-	# def construct_Jacobian(self, err, tape_loss):		
-	# 	num_layers = len(self.biases) 
-	# 	N = tf.shape(err)[0]
-
-	# 	weights_jacobians = tape_loss.jacobian(err, self.weights)
-	# 	weights_jacobians = [item for sublist in weights_jacobians for item in sublist]
-
-	# 	biases_jacobians = tape_loss.jacobian(err, self.biases)
-	# 	biases_jacobians = [item for sublist in biases_jacobians for item in sublist]
-
-	# 	jacobs_tol_W = tf.squeeze(tf.concat(weights_jacobians, axis = 3))
-	# 	if biases_jacobians[-1] == None:
-	# 		biases_jacobians[-1] = tf.zeros([N.numpy(), self.output_size, 1, self.output_size])
-	# 	if biases_jacobians[-2] == None:
-	# 		biases_jacobians[-2] = tf.zeros([N.numpy(), 1, 1, self.layers[-1]])
-
-	# 	jacobs_tol_b = tf.squeeze(tf.concat(biases_jacobians, axis = 3))
-
-	# 	return jacobs_tol_W, jacobs_tol_b
 
 	def construct_Hessian(self, loss_val, tape_loss):		
 		num_layers = len(self.biases) 

@@ -41,9 +41,7 @@ class CD_1D:
 			self.state_space_size = self.u_dim+self.P_dim
 			self.output_space_size  = 1
 			self.lb = np.array([0.0, 1e-4])
-			# self.lb = np.array([0.0, -4.0])
 			self.ub = np.array([1.0, 1.0])
-			# self.ub = np.array([1.0, 0.0])
 			self.Nf = N_p_train[0]
 			self.Nb = N_p_train[1]
 			self.Nn = N_p_train[2]
@@ -60,7 +58,6 @@ class CD_1D:
 
 			self.N0_tests = np.array([])
 			self.u0_tests = np.array([])
-			# self.var_list = [[0,1],[1,2]]
 
 		elif self.sampling_method == 3:
 			self.plimits = np.array([[-1,0]])
@@ -77,7 +74,6 @@ class CD_1D:
 			self.p_dim = 1
 			self.generate_para()
 			self.generate_RNN_init()
-			# self.var_list = [[0,1]]
 
 		self.N_p_test = N_p_test
 
@@ -118,8 +114,6 @@ class CD_1D:
 				p = self.mu_mat_train[:,i]
 				self.generate_one_sol(p)
 			return [self.mu_mat_train.T, self.u_samples]
-		# elif self.sampling_method == 1 or self.sampling_method == 2:
-		# 	return self.generate_PINN_samples()
 		elif self.sampling_method == 3:
 			return self.generate_RNN_samples()
 
@@ -130,7 +124,6 @@ class CD_1D:
 			for i in range(self.mu_mat_test.shape[1]):
 				p = self.mu_mat_test[:,i]
 				self.generate_one_sol(p, test = True)			
-			# return [self.mu_mat_test.T, self.u_tests]
 			return self.generate_POD_tests()
 		elif self.sampling_method == 1 or self.sampling_method == 2:
 			self.N0_tests = np.array([])
@@ -148,7 +141,6 @@ class CD_1D:
 
 	def u_exact(self, X):
 		x = X[:,[0]]
-		# xi = np.power(10,X[:,[1]])
 		xi = X[:,[1]]
 		u = 1-np.exp((x-1)/xi)
 		return u
@@ -188,7 +180,6 @@ class CD_1D:
 				self.N0_samples = np.concatenate((self.N0_samples, X_f),axis = 0) if self.N0_samples.size else X_f
 				self.u0_samples = np.concatenate((self.u0_samples,u_inner),axis = 0) if self.u0_samples.size else u_inner
 			else:
-				# u_tol = self.fill_BC(u, p)
 				X_0 = self.create_tol_X(p)
 				u_tol = self.u_exact(X_0)
 				self.N0_tests = np.concatenate((self.N0_tests, X_0),axis = 0) if self.N0_tests.size else X_0
@@ -203,14 +194,12 @@ class CD_1D:
 
 	def create_inner_X(self,p):
 		X_in = self.x_in.reshape((self.N-2,1))
-		# P = np.log10(p)*np.ones((self.nx,self.P_dim))
 		P = p*np.ones((self.nx,self.P_dim))
 		X_f = np.concatenate((X_in,P),axis=1)
 		return X_f
 
 	def create_tol_X(self,p):
 		X = self.x.reshape((self.N,1))
-		# P = np.log10(p)*np.ones((self.N,self.P_dim))
 		P = p*np.ones((self.N,self.P_dim))
 		X_f = np.concatenate((X,P),axis=1)
 		return X_f
@@ -276,30 +265,12 @@ class CD_1D:
 		Ns = [self.Nf, self.Nb, self.Nn, self.N0]
 		samples_list = []
 
-		filename = "CD_1D_{0}_4.npz".format(Ns)
+		filename = "CD_1D_{0}.npz".format(Ns)
 		if os.path.exists("{1}{0}".format(filename,self.path_env)):
 			npzfile = np.load("{1}{0}".format(filename,self.path_env))
 			if self.Nf>0:
 				self.Xf = npzfile['Xf']
 				target_f = np.zeros([self.Nf,1])
-				# input_range_sel = np.array([[0.985328125, 1.0], [np.power(10,-3.9610000381469725), np.power(10,-2.6790000667572023)]])
-				# input_range_sel = np.array([[0.96, 1.0], [-4.0, -2.5]])
-				# sampling_f = LHS(xlimits = self.x_p_domain)
-				# Xf_addon = sampling_f(100)
-				# Xf_addon[:,1] = np.power(10, Xf_addon[:,1])
-				# Xf_addon[:,0] = (1-Xf_addon[:,0])*(1-Xf_addon[:,1])+Xf_addon[:,0]
-				# self.Xf = np.concatenate((self.Xf,Xf_addon),axis=0)
-
-				# target_addon = np.zeros([100,1])
-				# target_f = np.concatenate((target_f,target_addon),axis=0)
-				# # inds = self.Xf[:,1]<1e-3
-				# # target_f[inds,0] = 1/self.Xf[inds,1]
-				# # plt.plot(Xf_addon[:,0], Xf_addon[:,1],'o')
-				# # plt.show()
-				# # input()
-				# self.Nf += 100
-
-				# self.Xf[-1,:] = Xf_addon
 			else:
 				self.Xf_tf = None
 			if self.Nb>0:
@@ -310,14 +281,6 @@ class CD_1D:
 				self.X0 = npzfile['X0']
 				self.u0 = npzfile['u0']
 			else:
-				# sampling_f = LHS(xlimits = self.x_p_domain)
-				# Xf_addon = sampling_f(100)
-				# Xf_addon[:,1] = np.power(10, Xf_addon[:,1])
-				# # # Xf_addon[:,0] = (1-Xf_addon[:,0])*(1-Xf_addon[:,1])+Xf_addon[:,0]
-				# self.X0 = Xf_addon
-				# self.u0 = self.u_exact(self.X0)
-				# self.N0 += 100
-
 				self.X0_tf = None
 				self.u0_tf = None
 		else:
@@ -341,14 +304,9 @@ class CD_1D:
 			self.ub_d = np.concatenate((ulb,urb),axis = 0)
 
 			if self.N0>0:
-				# sampling_0 = LHS(xlimits = self.x_p_domain)
 				sampling_0 = LHS(xlimits = np.array([[0.95,1]]))
-				# self.X0 = sampling_0(self.N0)
 				x = sampling_0(self.N0)
 				self.X0 = np.concatenate((x,1e-4*np.ones((self.N0,1))),axis = 1)
-				# self.X0[:,1] = np.power(10, self.X0[:,1])
-				# self.X0[:,0] = (1-self.X0[:,0])*(1-self.X0[:,1])+self.X0[:,0]
-
 				self.u0 = self.u_exact(self.X0)
 				np.savez(self.path_env+"{0}".format(filename), Xf = self.Xf, Xb_d = self.Xb_d, ub_d = self.ub_d, X0 = self.X0, u0 = self.u0)
 			else:
@@ -385,10 +343,6 @@ class CD_1D:
 		return samples_list
 
 	def generate_PINN_tests(self):
-		# N0_tests_tf = tf.constant(self.N0_tests, dtype = tf.float32)
-		# u0_tests_tf = tf.constant(self.u0_tests, dtype = tf.float32)
-		# u_test = self.u_exact(self.N0_tests)
-		# u0_tests_tf = tf.constant(u_test, dtype = tf.float32)
 		N = self.N0_tests.shape[0]
 		y_tf = tf.constant((),shape = (N,0),dtype = tf.float32)
 		t_tf = tf.constant((),shape = (N,0),dtype = tf.float32)
@@ -446,8 +400,6 @@ class CD_1D:
 			f_res_grid = None
 			
 		err_grid = u_test_grid-u_test_p_grid
-			# inputs_range = self.select_region(N_test.numpy(),f_res_val,3,1e-3)
-
 		err_test = tf.math.reduce_mean(tf.square(err_grid))
 
 
@@ -468,48 +420,26 @@ class CD_1D:
 			xi = self.mu_mat_test[0,i]
 			u_test_i = u_test_grid[i].numpy()
 			u_test_p_i = u_test_p_grid[i].numpy()
-			# f_res_i = f_res_grid[i].numpy()
 
-			if figure_save_path is not None:
-				folder_path = "{1}xi_{0}".format(xi, figure_save_path)
-				if not os.path.exists(folder_path):
-				    os.makedirs(folder_path)
-				scipy.io.savemat(folder_path+"/data4.mat", {'true_solution':u_test_i, 'approximation': u_test_p_i, 'xi':xi, 'x':self.x})
-			# fig = plt.figure(figsize=plt.figaspect(0.5))
-			# fig, ax = plt.subplots()
-			# ax = fig.add_subplot(1, 2, 1)
-			# ax = fig.add_subplot(1, 1, 1)
-			# ax.plot(self.x, u_test_p_i, color ="red")
-			# ax.plot(self.x, u_test_i)
-			# ax.set_xlabel(r'$x$'))
-			# ax.set_ylabel(r'$u$')
-			# fig.suptitle(r"$\xi$ = {0}".format(xi))
+			# if figure_save_path is not None:
+			# 	folder_path = "{1}xi_{0}".format(xi, figure_save_path)
+			# 	if not os.path.exists(folder_path):
+			# 	    os.makedirs(folder_path)
+			# 	scipy.io.savemat(folder_path+"/data4.mat", {'true_solution':u_test_i, 'approximation': u_test_p_i, 'xi':xi, 'x':self.x})
+
+			fig, ax = plt.subplots()
+			ax.plot(self.x, u_test_p_i, color ="red")
+			ax.plot(self.x, u_test_i)
+			ax.set_xlabel(r'$x$')
+			ax.set_ylabel(r'$u$')
+			fig.suptitle(r"$\xi$ = {0}".format(xi))
 			# if figure_save_path is not None:
 				# plt.savefig("{1}/u_xi_{0}.png".format(xi,folder_path))
 				# plt.cla()
 				# plt.clf()
 				# plt.close()
 			# else:
-			# plt.show()
-
-			# fig1, ax1 = plt.subplots()
-			# fig1 = plt.figure(2)
-			# ax1 = fig.add_subplot(1, 2, 2)
-			# ax1 = fig1.add_subplot(1, 1, 1)
-			# ax1 = fig1.gca(projection='3d')
-			# ax1.plot(self.x,f_res_i)
-			# ax1.set_xlabel(r'$x$')
-			# ax1.set_ylabel(r'$f(u,\xi)$')
-			# fig1.suptitle(r"$\xi$ = {0}".format(xi))
-			# if figure_save_path is not None:
-				# plt.savefig("{1}/f_xi_{0}.png".format(xi,folder_path))
-				# plt.close()
-				# plt.cla()
-				# plt.clf()
-			# else:
-				# plt.show()
-			# ax1.semilogy(self.x, np.abs(u_test_p_i-u_test_i))
-			# plt.show()
+			plt.show()
 
 	def select_region(self, inputs, vec, n, epsilon):
 		vec_mean = np.mean(vec)

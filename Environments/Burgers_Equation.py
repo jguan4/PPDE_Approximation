@@ -109,8 +109,6 @@ class Burgers_Equation:
 					self.generate_one_sol(p)
 				np.save(self.path_env+"{1}_POD_{0}.npy".format(self.N_p_train,self.name), self.u_samples)
 			return [self.mu_mat_train.T, self.u_samples]
-		# elif self.sampling_method == 1 or self.sampling_method == 2:
-		# 	return self.generate_PINN_samples()
 		elif self.sampling_method == 3:
 			return self.generate_RNN_samples()
 
@@ -125,7 +123,6 @@ class Burgers_Equation:
 					p = self.mu_mat_test[:,i]
 					self.generate_one_sol(p, test = True)
 				np.save(self.path_env+"{1}_POD_{0}_test.npy".format(self.N_p_test,self.name), self.u_tests)	
-				# return [self.mu_mat_test.T, self.u_tests]
 			return self.generate_POD_tests()
 		elif self.sampling_method == 1 or self.sampling_method == 2:
 			if os.path.exists(self.path_env+"{1}_PINN_{0}_test_input.npy".format(self.N_p_test,self.name)) and os.path.exists(self.path_env+"{1}_PINN_{0}_test_target.npy".format(self.N_p_test,self.name)):
@@ -187,7 +184,6 @@ class Burgers_Equation:
 				self.N0_samples = np.concatenate((self.N0_samples, X_f),axis = 0) if self.N0_samples.size else X_f
 				self.u0_samples = np.concatenate((self.u0_samples,u),axis = 0) if self.u0_samples.size else u
 			else:
-				# u_tol = self.fill_BC(u, p)
 				X_0 = self.create_tol_X(p)
 				u_tol = u.reshape((self.N*self.Nt,1))
 				self.N0_tests = np.concatenate((self.N0_tests, X_0),axis = 0) if self.N0_tests.size else X_0
@@ -200,7 +196,6 @@ class Burgers_Equation:
 		Ts = T*np.ones((1,self.N))
 		Xs = Xs.reshape((self.Nt*self.N,1))
 		Ts = Ts.reshape((self.Nt*self.N,1))
-		# P = np.log10(p)*np.ones((self.N,self.P_dim))
 		P = p*np.ones((self.N*self.Nt,self.P_dim))
 		X_f = np.concatenate((Xs,Ts,P),axis=1)
 		return X_f
@@ -334,10 +329,6 @@ class Burgers_Equation:
 	def test_NN(self, net, record_path = None):
 		if record_path is not None:
 			if os.path.exists(record_path):
-				# rel_errs = np.loadtxt(record_path, delimiter="\n")
-				# rel_errs = rel_errs.tolist()
-				# if isinstance(rel_errs, float):
-				# 	rel_errs = [rel_errs]
 				pass
 			else:
 				with open(record_path, mode='w') as record:
@@ -369,7 +360,6 @@ class Burgers_Equation:
 			u_test_p_grid = tf.reshape(u_test_p,(self.N_p_test,self.Nt,self.N))
 			u_test_p_grid = tf.dtypes.cast(u_test_p_grid, tf.float32)
 			f_res_grid = tf.reshape(f_res, (self.N_p_test,self.Nt,self.N))
-			# inputs_range = self.select_region(N_test.numpy(),f_res_val,3,1e-3)
 
 		err_grid = u_test_grid-u_test_p_grid
 		err_test = tf.math.reduce_mean(tf.square(err_grid))
@@ -381,8 +371,6 @@ class Burgers_Equation:
 			with open(record_path, 'a') as f:
 				writer = csv.writer(f)
 				writer.writerow(list_info)
-			# rel_errs.append(rel_err_test.numpy())
-			# np.savetxt(record_path, rel_errs, delimiter =", ", fmt ='% s') 
 		print("Test average error is: {0}\nRelative error is: {1}".format(err_test.numpy(), rel_err_test.numpy()))
 
 		return u_test_grid, u_test_p_grid, err_test, rel_err_test, f_res_grid

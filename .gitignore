@@ -1,2 +1,2 @@
-./Log/*
-./__pycache__/*
+Log/*
+__pycache__/*

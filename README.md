@@ -13,17 +13,17 @@ The implementation is structured in a way such that each component is implemente
   - Viscous Burgers' Equation, 
   - Nonlinear Diffusion Equation, 
   - 1D and 2D Convection-Diffusion Equations. 
-  Each script has functions that process training and testing samples, testing approximation produced by the network. 
+Each script has functions that process training and testing samples, testing approximation produced by the network. 
 - Neural Networks: this component includes all files in the `NN` folder. The folder includes implementations for 
   - Dense Net, 
   - ResNet and 
   - RNN. 
-  Each script has functions that initialize and update weights, outputs gradient and Jacobian matrix for the weights and computes the loss. 
-  - Optimizers: this component includes all files in `Optimizers` folder. The folder includes implementations for 
-    - Levenberg-Marquardt 
-    - Stochastic Gradient Descent
-    - LBFGS
-  Each scripts has functions that compute updates to the weights and modify the weights of the network. 
+Each script has functions that initialize and update weights, outputs gradient and Jacobian matrix for the weights and computes the loss. 
+- Optimizers: this component includes all files in `Optimizers` folder. The folder includes implementations for 
+  - Levenberg-Marquardt 
+  - Stochastic Gradient Descent
+  - LBFGS
+Each scripts has functions that compute updates to the weights and modify the weights of the network. 
 
 ## Dependent Packages
 The following packages are required to run the scripts:

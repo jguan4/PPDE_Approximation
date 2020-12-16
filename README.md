@@ -1,9 +1,28 @@
----
+<!-- ---
 permalink: /making-readmes-readable/
 title: Making READMEs readable
----
+--- -->
+# PPDE Approximation: AMSC 663-664 Project
+This project is designed to explore applications of machine learning methods in approximating parameter-dependent Partial Differential Equations (PDEs). 
 
-Every repo contains a README, which is a document that is intended to explain, at first glance, what a project does and how to install or test the code.
+This github repository holds the implementation needed to run POD-NN RB proposed in *non-intrusive reduced order modeling of nonlinear problems using neural networks* (2018) and PINN proposed in *physics-informed neural networks* (2019). 
+
+The implementation is structured in a way such that each component is implemented relatively independently. Here is a general overview of what each component does:
+- Driver: this component includes files 'NN_Driver.py', 'DEMO.py' and 'run_DEMO.py'. The file 'NN_Driver.py' will call the environment script to create training and testing samples for different problems, call neural network scripts to initialize, train, reload or test weights and call optimizer scripts to optimize weights in the neural networks. 'NN_Driver.py' will also distinguish the algorithm used (POD-NN RB or PINN) to run the appropriate algorithm. Files 'DEMO.py' and 'run_DEMO.py' call 'NN_Driver.py' to input appropriate user-defined parameters.
+- Environments: this component includes all files in 'Environments' folder. The folder includes implantations for viscous Burgers' Equation, Nonlinear Diffusion Equation, 1D and 2D Convection-Diffusion Equations. Each script has functions that process training and testing samples, testing approximation produced by the network. 
+- Neural Networks: this component includes all files in the 'NN' folder. The folder includes implementations for Dense Net, ResNet and RNN. Each script has functions that initialize and update weights, outputs gradient and Jacobian matrix for the weights and computes the loss. 
+
+## Dependent Packages
+The following packages are required to run the scripts:
+'''
+- Tensorflow 2
+- Numpy
+- Scipy
+- Matplotlib
+- SMT
+'''
+
+<!--Every repo contains a README, which is a document that is intended to explain, at first glance, what a project does and how to install or test the code.
 
 READMEs are really important because they’re the first item a user will see when encountering your code. Creating a readable README ensures that your co-workers and the public will be able to understand the intention of your program, install the software, and fork and adapt your projects.
 
@@ -76,3 +95,4 @@ For example, see ["Licenses and attribution" in the U.S. Web Design Standards RE
 This part of the repo should make it easy for users to get in touch with the team developing the project. This is also where you should list any listservs, chat programs, or social media groups that have been created to keep contributors informed.
 
 Any other information that you’d like to share with users can go in the Wiki section of your repository.
+ -->

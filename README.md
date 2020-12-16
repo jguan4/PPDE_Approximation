@@ -9,21 +9,22 @@ This github repository holds the implementation needed to run POD-NN RB proposed
 
 The implementation is structured in a way such that each component is implemented relatively independently. Here is a general overview of what each component does:
 - Driver: this component includes files `NN_Driver.py`, `DEMO.py` and `run_DEMO.py`. The file `NN_Driver.py` will call the environment script to create training and testing samples for different problems, call neural network scripts to initialize, train, reload or test weights and call optimizer scripts to optimize weights in the neural networks. `NN_Driver.py` will also distinguish the algorithm used (POD-NN RB or PINN) to run the appropriate algorithm. Files `DEMO.py` and `run_DEMO.py` call `NN_Driver.py` to input appropriate user-defined parameters.
-- Environments: this component includes all files in `Environments` folder. The folder includes implementations for 
+
+- Environments: this component includes all files in `Environments` folder. Each script has functions that process training and testing samples, testing approximation produced by the network. The folder includes implementations for 
   - Viscous Burgers' Equation, 
   - Nonlinear Diffusion Equation, 
   - 1D and 2D Convection-Diffusion Equations. 
-Each script has functions that process training and testing samples, testing approximation produced by the network. 
-- Neural Networks: this component includes all files in the `NN` folder. The folder includes implementations for 
+
+- Neural Networks: this component includes all files in the `NN` folder. Each script has functions that initialize and update weights, outputs gradient and Jacobian matrix for the weights and computes the loss. The folder includes implementations for 
   - Dense Net, 
   - ResNet and 
   - RNN. 
-Each script has functions that initialize and update weights, outputs gradient and Jacobian matrix for the weights and computes the loss. 
-- Optimizers: this component includes all files in `Optimizers` folder. The folder includes implementations for 
+
+- Optimizers: this component includes all files in `Optimizers` folder. Each scripts has functions that compute updates to the weights and modify the weights of the network. The folder includes implementations for 
   - Levenberg-Marquardt 
   - Stochastic Gradient Descent
   - LBFGS
-Each scripts has functions that compute updates to the weights and modify the weights of the network. 
+
 
 ## Dependent Packages
 The following packages are required to run the scripts:

@@ -1,0 +1,434 @@
+import numpy as np
+import os 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1' 
+import time
+# os.environ['CUDA_VISIBLE_DEVICES'] = ''
+
+import tensorflow as tf
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+import matplotlib.pyplot as plt 
+from mpl_toolkits.mplot3d import Axes3D
+tf.random.set_seed(5)
+
+class ResNet_tf:
+	def __init__(self, input_size, output_size, layers, env, Ntr, Ntr_t, Ntr_name, regular_alphas, type_weighting):
+		self.env = env
+		self.name = "Res"
+		self.input_size = input_size
+		self.output_size = output_size
+		self.layers = layers
+		self.Ntr = Ntr
+		self.Ntr_t = Ntr_t
+		self.Ntr_name = Ntr_name
+		self.lb = tf.constant(self.env.lb, dtype = tf.float32)
+		self.ub = tf.constant(self.env.ub, dtype = tf.float32)
+		self.regular_alphas = regular_alphas
+		self.type_weighting = type_weighting
+		self.loss_f_list = []
+		self.loss_b_d_list = []
+		self.initialize_NN()
+
+	def initialize_NN(self):
+		num_layers = len(self.layers) 
+		self.weights = []
+		self.weights_dims = []
+		self.biases = []
+		self.biases_dims = []
+		self.weights_len = 0
+		self.biases_len = 0
+
+		W_name = "weight_{0}".format("input")
+		W = self.xavier_init(size=[1, self.input_size*self.layers[0]], name = W_name)
+		self.weights_len += self.input_size*self.layers[0]
+		b_name = "bias_{0}".format("input")
+		# b = self.xavier_init(size = [1, self.layers[0]], name = b_name)
+		b = tf.Variable(tf.zeros(shape = [1, self.layers[0]]), name = b_name)
+		self.biases_len += self.layers[0]
+
+		self.weights_dims.append((self.input_size, self.layers[0]))
+		self.biases_dims.append((1, self.layers[0]))
+		self.weights.append(W)
+		self.biases.append(b)
+
+		for l in range(num_layers-1):
+			W_name = "weight_{0}".format(l)
+			W = self.xavier_init(size=[1, self.layers[l]*self.layers[l+1]], name = W_name)
+			self.weights_len += self.layers[l]*self.layers[l+1]
+
+			b_name = "bias_{0}".format(l)
+			# b = self.xavier_init(size = [1, self.layers[l+1]], name = b_name)
+			b = tf.Variable(tf.zeros(shape = [1, self.layers[l+1]]), name = b_name)
+			self.biases_len += self.layers[l+1]
+
+			self.weights_dims.append((self.layers[l], self.layers[l+1]))
+			self.biases_dims.append((1, self.layers[l+1]))
+
+			self.weights.append(W)
+			self.biases.append(b)
+
+		W_name = "weight_{0}".format("ouput")
+		b_name = "biase_{0}".format("ouput")
+		W = self.xavier_init(size=[1, self.layers[-1]*self.output_size], name = W_name)
+		# b = self.xavier_init(size = [1, self.output_size], name = b_name)
+		b =tf.Variable(tf.zeros(shape = [1, self.output_size]), name = b_name)
+
+		self.weights_len += self.output_size*self.layers[-1]
+		self.biases_len += self.output_size	
+
+		self.weights_dims.append((self.layers[-1], self.output_size))
+		self.biases_dims.append((1, self.output_size))
+
+		self.weights.append(W)
+		self.biases.append(b)
+
+
+	def xavier_init(self, size, name):
+		xavier_stddev = np.sqrt(6)/np.sqrt(np.sum(size)) #np.sqrt(2/(in_dim + out_dim))
+		return tf.Variable(tf.random.uniform(size, minval = -np.sqrt(6)/np.sqrt(np.sum(size)), maxval = np.sqrt(6)/np.sqrt(np.sum(size))), dtype=tf.float32, name = name)
+	
+	# def forward(self, Xs_tf_list):
+	# 	num_layers = len(self.weights) 
+	# 	with tf.GradientTape(persistent = True) as tape:
+	# 		tape.watch(Xs_tf_list)
+	# 		X = tf.concat(Xs_tf_list, axis = 1)
+	# 		# H = 2.0*(X - self.lb)/(self.ub - self.lb) - 1.0
+	# 		H = (X - self.lb)/(self.ub - self.lb)
+	# 		# H = X
+	# 		H = self.linear_pass(H,self.weights[0],self.biases[0],self.weights_dims[0],self.biases_dims[0])
+	# 		for l in range(1,num_layers-1):
+	# 			H = self.Res_pass(H,self.weights[l],self.biases[l],self.weights_dims[l],self.biases_dims[l])
+	# 		W = tf.reshape(self.weights[-1][0], self.weights_dims[-1][0])
+	# 		b = self.biases[-1][0]
+	# 		H = tf.matmul(H, W) + b
+	# 	return H, tape
+
+	# @tf.function
+	# def linear_pass(self, H, layer_i):
+	# 	W = tf.reshape(self.weights[layer_i][0],W_dim_list[0])
+	# 	b = b_list[0]
+	# 	H = tf.keras.activations.tanh(tf.matmul(H, W) + b)
+	# 	return H
+
+	# def Res_pass(self, H, W_list, b_list, W_dim_list, b_dim_list):
+	# 	n = len(W_list)
+	# 	X = H
+	# 	for i in range(n):
+	# 		W = tf.reshape(W_list[i],W_dim_list[i])
+	# 		b = b_list[i]
+	# 		X = tf.keras.activations.tanh(tf.matmul(X, W) + b)
+	# 	# W = tf.reshape(W_list[-1],W_dim_list[-1])
+	# 	# b = b_list[-1]
+	# 	# X = tf.matmul(X, W) + b
+	# 	Y = 0.5*X+H
+	# 	return Y
+
+	@tf.function
+	def forward(self, x_tf, y_tf, t_tf, xi_tf):
+		num_layers = len(self.weights) 
+		X = tf.concat((x_tf, y_tf, t_tf, xi_tf), axis = -1)
+		H = (X - self.lb)/(self.ub - self.lb)
+		W = tf.reshape(self.weights[0], self.weights_dims[0])
+		b = self.biases[0]
+		H = tf.keras.activations.tanh(tf.matmul(H, W) + b)
+		for l in range(1,num_layers-1):
+			W = tf.reshape(self.weights[l], self.weights_dims[l])
+			b = self.biases[l]
+			H = H + tf.keras.activations.tanh(tf.matmul(H, W) + b)	
+		W = tf.reshape(self.weights[-1], self.weights_dims[-1])
+		b = self.biases[-1]
+		H = tf.matmul(H, W) + b
+		return H
+
+	@tf.function
+	def derivatives(self, x_tf, y_tf, t_tf, xi_tf):
+		with tf.GradientTape(persistent = True) as tape1:
+			tape1.watch(x_tf)
+			tape1.watch(y_tf)
+			tape1.watch(t_tf)
+			with tf.GradientTape(persistent = True) as tape:
+				tape.watch(x_tf)
+				tape.watch(y_tf)
+				tape.watch(t_tf)
+				H = self.forward(x_tf, y_tf, t_tf, xi_tf)
+			u_x = tape.gradient(H, x_tf)
+			u_y = tape.gradient(H, y_tf)
+			u_t = tape.gradient(H, t_tf)
+		u_xx = tape1.gradient(u_x, x_tf)
+		u_yy = tape1.gradient(u_y, y_tf)
+		return H, u_x, u_y, u_t, u_xx, u_yy
+
+	@tf.function
+	def compute_residual(self, x_tf, y_tf, t_tf, xi_tf, target):
+		u, u_x, u_y, u_t, u_xx, u_yy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
+		f_res = self.env.f_res(x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy)
+		f_err = f_res - target
+		return f_err
+
+	@tf.function 
+	def compute_neumann(self, x_tf, y_tf, t_tf, xi_tf, target):
+		u, u_x, u_y, u_t, u_xx, u_yy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
+		ub_n_p = self.env.neumann_bc(u_x, u_y)
+		err = ub_n_p - target
+		return err
+
+	@tf.function
+	def compute_solution(self, x_tf, y_tf, t_tf, xi_tf, target):
+		u_p = self.forward(x_tf, y_tf, t_tf, xi_tf)
+		err = u_p - target
+		return err
+
+	# @tf.function
+	def loss(self, samples_list, save_toggle = False):
+		loss_val = tf.constant(0, dtype = tf.float32)
+		for i in range(len(samples_list)):
+			dict_i = samples_list[i]
+			name_i = dict_i["type"]
+			x_tf = dict_i["x_tf"]
+			y_tf = dict_i["y_tf"]
+			t_tf = dict_i["t_tf"]
+			xi_tf = dict_i["xi_tf"]
+			target = dict_i["target"]
+			N = dict_i["N"]
+
+			if name_i == "Res":
+				f_res = self.compute_residual(x_tf, y_tf, t_tf, xi_tf, target)
+				f_u = f_res*np.sqrt(self.type_weighting[0]/N)
+				loss_f = tf.math.reduce_sum(f_u**2)/2
+				loss_val = loss_val + loss_f
+				if save_toggle:
+					self.loss_f_list.append(loss_f.numpy())
+
+			elif name_i == "B_D":
+				err_do = self.compute_solution(x_tf, y_tf, t_tf, xi_tf, target)
+				err_d = err_do*np.sqrt(self.type_weighting[1]/(N))
+				loss_d = tf.math.reduce_sum(err_d**2)/2
+				loss_val = loss_val + loss_d
+				if save_toggle:
+					self.loss_b_d_list.append(loss_d.numpy())
+					
+			elif name_i == "B_N":
+				err_n = self.compute_neumann(x_tf, y_tf, t_tf, xi_tf,target)
+				err_n = (err_n)*np.sqrt(self.type_weighting[2]/(N))
+				loss_n = tf.math.reduce_sum(err_n**2)/2
+				loss_val = loss_val + loss_n
+
+			elif name_i == "Init":
+				err_0 = self.compute_solution(x_tf, y_tf, t_tf, xi_tf, target)
+				err_0 = (err_0)*np.sqrt(self.type_weighting[3]/(N))
+				loss_0 = tf.math.reduce_sum(err_0**2)/2
+				loss_val = loss_val + loss_0
+
+				# if "CD" in self.env.name and self.env.sampling_method == 1:
+				# 	with tape_forward:
+				# 		u_11 = tape_forward.gradient(u_p, input_i[0])
+				# 		u_12 = tape_forward.gradient(u_p, input_i[1])
+				# 	u_21 = tape_forward.gradient(u_11, input_i[0])
+				# 	u_22 = tape_forward.gradient(u_12, input_i[1])
+
+				# 	xi = input_i[1]
+				# 	f0 = -u_21*xi+u_11
+				# 	f0 = f0*np.sqrt(self.type_weighting[3]/num_list[3])*1e-2
+				# 	loss_f0 = tf.math.reduce_sum(f0**2)/2
+				# 	loss_list.append(loss_f0)
+				# 	err_list.append(f0)
+
+		return loss_val
+
+
+	@tf.function
+	def construct_Jacobian_solution(self, x_tf, y_tf, t_tf, xi_tf, target, N):
+		with tf.GradientTape(persistent = True) as tape:
+			err = self.compute_solution(x_tf, y_tf, t_tf, xi_tf, target)*tf.math.sqrt(self.type_weighting[1]/(N))
+			err = tf.reshape(err, [tf.reduce_prod(tf.shape(err)),1])
+		weights_jacobians = tape.jacobian(err, self.weights)
+		biases_jacobians = tape.jacobian(err, self.biases)
+
+		jacobs_tol_W = tf.squeeze(tf.concat(weights_jacobians, axis = -1))
+		jacobs_tol_b = tf.squeeze(tf.concat(biases_jacobians, axis = -1))
+		del tape
+		return jacobs_tol_W, jacobs_tol_b, err
+
+	@tf.function
+	def construct_Jacobian_residual(self, x_tf, y_tf, t_tf, xi_tf, target, N):
+		with tf.GradientTape(persistent = True) as tape:
+			f_res = self.compute_residual(x_tf, y_tf, t_tf, xi_tf, target)
+			err = (f_res)*tf.math.sqrt(self.type_weighting[0]/(N))
+			err = tf.reshape(err, [tf.reduce_prod(tf.shape(err)),1])
+		weights_jacobians = tape.jacobian(err, self.weights)
+		biases_jacobians = tape.jacobian(err, self.biases)
+		if biases_jacobians[-1] is None:
+			biases_jacobians[-1] = tf.zeros([tf.shape(biases_jacobians[0])[0], self.output_size, 1, self.output_size])
+		jacobs_tol_W = tf.squeeze(tf.concat(weights_jacobians, axis = -1))
+		jacobs_tol_b = tf.squeeze(tf.concat(biases_jacobians, axis = -1))
+		del tape
+		return jacobs_tol_W, jacobs_tol_b, err
+
+	@tf.function
+	def construct_Jacobian_neumann(self, x_tf, y_tf, t_tf, xi_tf, target, N):
+		with tf.GradientTape(persistent = True) as tape:
+			err = self.compute_neumann(x_tf, y_tf, t_tf, xi_tf, target)*tf.math.sqrt(self.type_weighting[2]/(N))
+			err = tf.reshape(err, [tf.reduce_prod(tf.shape(err)),1])
+		weights_jacobians = tape.jacobian(err, self.weights)
+		biases_jacobians = tape.jacobian(err, self.biases)
+		if biases_jacobians[-1] is None:
+			biases_jacobians[-1] = tf.zeros([tf.shape(biases_jacobians[0])[0], self.output_size, 1, self.output_size])
+		jacobs_tol_W = tf.squeeze(tf.concat(weights_jacobians, axis = -1))
+		jacobs_tol_b = tf.squeeze(tf.concat(biases_jacobians, axis = -1))
+		del tape
+		return jacobs_tol_W, jacobs_tol_b, err
+
+	def construct_Gradient(self, samples_list):
+		with tf.GradientTape(persistent = True) as tape:
+			loss_val = self.loss(samples_list)
+		weights_grads = tape.gradient(loss_val, self.weights)
+		biases_grads = tape.gradient(loss_val, self.biases)
+		if biases_grads[-1] is None:
+			biases_grads[-1] = tf.zeros([1, self.output_size])
+		grads_tol_W = tf.transpose(tf.concat(weights_grads, axis = -1))
+		grads_tol_b = tf.transpose(tf.concat(biases_grads, axis = -1))
+		return loss_val, grads_tol_W, grads_tol_b
+
+	# @tf.function
+	# def construct_Jacobian(self, err, tape_loss):		
+	# 	num_layers = len(self.biases) 
+	# 	N = tf.shape(err)[0]
+
+	# 	weights_jacobians = tape_loss.jacobian(err, self.weights)
+	# 	weights_jacobians = [item for sublist in weights_jacobians for item in sublist]
+
+	# 	biases_jacobians = tape_loss.jacobian(err, self.biases)
+	# 	biases_jacobians = [item for sublist in biases_jacobians for item in sublist]
+
+	# 	jacobs_tol_W = tf.squeeze(tf.concat(weights_jacobians, axis = 3))
+	# 	if biases_jacobians[-1] == None:
+	# 		biases_jacobians[-1] = tf.zeros([N.numpy(), self.output_size, 1, self.output_size])
+	# 	if biases_jacobians[-2] == None:
+	# 		biases_jacobians[-2] = tf.zeros([N.numpy(), 1, 1, self.layers[-1]])
+
+	# 	jacobs_tol_b = tf.squeeze(tf.concat(biases_jacobians, axis = 3))
+
+	# 	return jacobs_tol_W, jacobs_tol_b
+
+	def construct_Hessian(self, loss_val, tape_loss):		
+		num_layers = len(self.biases) 
+
+		with tape_loss:
+			loss_grad_W, loss_grad_b = self.construct_Gradient(loss_val, tape_loss)
+		hessian_W = tape_loss.jacobian(loss_grad_W, self.weights)
+		hessian_b = tape_loss.jacobian(loss_grad_b, self.biases)
+		hessian_W = tf.squeeze(tf.concat(hessian_W, axis = 3))
+		if hessian_b[-1] == None:
+			hessian_b[-1] = tf.zeros([self.biases_len, self.output_size, 1, self.output_size])
+		hessian_b = tf.squeeze(tf.concat(hessian_b, axis = 3))
+		return hessian_W, hessian_b
+
+	def update_weights_biases(self, weights_update, biases_update):
+		num_layers = len(self.biases)
+		W_ind_count = 0
+		b_ind_count = 0 
+		for l in range(num_layers):
+			W_len = np.prod(self.weights_dims[l])
+			b_len = np.prod(self.biases_dims[l])
+			W_update = weights_update[W_ind_count:W_ind_count+W_len]
+			b_update = biases_update[b_ind_count:b_ind_count+b_len]
+			self.weights[l].assign_add(tf.reshape(W_update, [1, W_len]))
+			self.biases[l].assign_add(tf.reshape(b_update, [1, b_len]))
+
+			W_ind_count += W_len
+			b_ind_count += b_len
+
+	def set_weights_biases(self, new_weights, new_biases, lin = False):
+		num_layers = len(self.biases) 
+		if not lin:
+			for l in range(num_layers):
+				self.weights[l].assign(new_weights[l])
+				self.biases[l].assign(new_biases[l])
+		if lin:
+			W_ind_count = 0
+			b_ind_count = 0 
+			weights = []
+			biases = []
+			for l in range(num_layers):
+				W_len = np.prod(self.weights_dims[l])
+				b_len = np.prod(self.biases_dims[l])
+				W_new = new_weights[W_ind_count:W_ind_count+W_len]
+				b_new = new_biases[b_ind_count:b_ind_count+b_len]
+				W_new = tf.reshape(W_new, [1, W_len])
+				b_new = tf.reshape(b_new, [1, b_len])
+				self.weights[l].assign(W_new)
+				self.biases[l].assign(b_new)
+				W_ind_count += W_len
+				b_ind_count += b_len
+		return self.weights, self.biases
+
+	def get_weights_biases(self):
+		weights = []
+		biases = []
+		num_layers = len(self.biases) 
+		for l in range(num_layers):
+			W = self.weights[l]
+			b = self.biases[l]
+			W_len = np.prod(self.weights_dims[l])
+			b_len = np.prod(self.biases_dims[l])
+			W_copy = tf.identity(W)
+			b_copy = tf.identity(b)
+			weights.append(W_copy)
+			biases.append(b_copy)
+			weights_lin = tf.concat((weights_lin,tf.reshape(W_copy, [1, W_len])),axis = 1) if l != 0 else tf.reshape(W_copy, [1, W_len])
+			biases_lin = tf.concat((biases_lin,tf.reshape(b_copy, [1, b_len])),axis = 1) if l != 0 else tf.reshape(b_copy, [1, b_len])
+		return weights, biases, weights_lin, biases_lin
+
+
+	def set_weights_loss(self, samples_list, new_weights, new_biases):
+		self.set_weights_biases(tf.squeeze(new_weights),tf.squeeze(new_biases),lin=True)
+		loss_val_tf, _, _, _ = self.loss(samples_list, self.Ntr)
+		return loss_val_tf.numpy()
+
+	def line_search(self, f, x, y, delta_x, delta_y ,tau, alpha = 0.01):
+		incre_x = tau*delta_x
+		incre_y = tau*delta_y
+		x_new = x + incre_x
+		y_new = y + incre_y
+		rhs = f(x, y) - alpha*np.sum([np.sum(incre_x*delta_x),np.sum(incre_y*delta_y)])
+		while f(x_new, y_new)>rhs:
+			tau = 0.5*tau
+			incre_x = tau*delta_x
+			incre_y = tau*delta_y
+			x_new = x + incre_x
+			y_new = y + incre_y
+			rhs = f(x, y) - alpha*np.sum([np.sum(incre_x*delta_x),np.sum(incre_y*delta_y)])
+		return tau, x_new, y_new
+
+	def select_batch(self, samples_list, batch_size = 64): 
+		sample_batch_list = []
+		batch_sizes = []
+		for i in range(len(samples_list)):
+			sample_i = samples_list[i]
+			N = sample_i["N"]
+			if N>batch_size:
+				N_sel = np.random.choice(N,batch_size).reshape([batch_size,1])
+				input_i = sample_i["input"]
+				output_i = sample_i["output"]
+				Ntr_name_i = sample_i["type"]
+				us_batch = tf.gather_nd(output_i,N_sel)
+				Xs_batch_list = []
+				for z in range(len(input_i)):
+					x_i = input_i[z]
+					Xs_batch_list.append(tf.Variable(tf.gather_nd(x_i,N_sel), trainable = False, name = "batch_{0}".format(z)))
+				samples_i_dict = {"type":Ntr_name_i, "output":us_batch, "input":Xs_batch_list, "N":N}
+				sample_batch_list.append(samples_i_dict)
+				batch_sizes.append(batch_size)
+			else:
+				batch_sizes.append(N)
+				sample_batch_list.append(sample_i)
+		return sample_batch_list, batch_sizes
+
+	def save_weights_biases(self, filename):
+		_, _, weights_lin, biases_lin = self.get_weights_biases()
+		np.savez(filename, weights_lin = weights_lin.numpy(), biases_lin = biases_lin.numpy())
+
+	def load_weights_biases(self, filename):
+		npzfile = np.load(filename)
+		weights_lin = npzfile['weights_lin']
+		biases_lin = npzfile['biases_lin']
+		self.set_weights_biases(np.squeeze(weights_lin),np.squeeze(biases_lin),lin = True)

@@ -8,19 +8,19 @@ This project is designed to explore applications of machine learning methods in 
 This github repository holds the implementation needed to run POD-NN RB proposed in *non-intrusive reduced order modeling of nonlinear problems using neural networks* (2018) and PINN proposed in *physics-informed neural networks* (2019). 
 
 The implementation is structured in a way such that each component is implemented relatively independently. Here is a general overview of what each component does:
-- Driver: this component includes files 'NN_Driver.py', 'DEMO.py' and 'run_DEMO.py'. The file 'NN_Driver.py' will call the environment script to create training and testing samples for different problems, call neural network scripts to initialize, train, reload or test weights and call optimizer scripts to optimize weights in the neural networks. 'NN_Driver.py' will also distinguish the algorithm used (POD-NN RB or PINN) to run the appropriate algorithm. Files 'DEMO.py' and 'run_DEMO.py' call 'NN_Driver.py' to input appropriate user-defined parameters.
-- Environments: this component includes all files in 'Environments' folder. The folder includes implantations for viscous Burgers' Equation, Nonlinear Diffusion Equation, 1D and 2D Convection-Diffusion Equations. Each script has functions that process training and testing samples, testing approximation produced by the network. 
-- Neural Networks: this component includes all files in the 'NN' folder. The folder includes implementations for Dense Net, ResNet and RNN. Each script has functions that initialize and update weights, outputs gradient and Jacobian matrix for the weights and computes the loss. 
+- Driver: this component includes files `NN_Driver.py`, `DEMO.py` and `run_DEMO.py`. The file `NN_Driver.py` will call the environment script to create training and testing samples for different problems, call neural network scripts to initialize, train, reload or test weights and call optimizer scripts to optimize weights in the neural networks. `NN_Driver.py` will also distinguish the algorithm used (POD-NN RB or PINN) to run the appropriate algorithm. Files `DEMO.py` and `run_DEMO.py` call `NN_Driver.py` to input appropriate user-defined parameters.
+- Environments: this component includes all files in `Environments` folder. The folder includes implantations for viscous Burgers' Equation, Nonlinear Diffusion Equation, 1D and 2D Convection-Diffusion Equations. Each script has functions that process training and testing samples, testing approximation produced by the network. 
+- Neural Networks: this component includes all files in the `NN` folder. The folder includes implementations for Dense Net, ResNet and RNN. Each script has functions that initialize and update weights, outputs gradient and Jacobian matrix for the weights and computes the loss. 
 
 ## Dependent Packages
 The following packages are required to run the scripts:
-'''
+```
 - Tensorflow 2
 - Numpy
 - Scipy
 - Matplotlib
 - SMT
-'''
+```
 
 <!--Every repo contains a README, which is a document that is intended to explain, at first glance, what a project does and how to install or test the code.
 

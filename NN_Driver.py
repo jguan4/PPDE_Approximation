@@ -58,8 +58,6 @@ class NN_Driver:
 		elif method_str == "PINN":
 			self.path_log = PATH_L + "Net{6}_Layers{0}_Ntr{1}_h{2}_Reg{3}_Sample{4}_Weight{5}_Opt{7}/".format(self.layers, Ntr, int(1/h), regular_alphas, self.sampling_method, type_weighting, self.net_toggle,self.opt_toggle)
 
-		print(self.path_log)
-		input()
 		if not os.path.exists(self.path_log):
 			os.makedirs(self.path_log)
 		self.path_env = "./Environments/{0}/".format(self.env_toggle)
@@ -107,7 +105,8 @@ class NN_Driver:
 
 	def train_nn(self, save_toggle = True):
 		if self.opt_toggle == "lm":
-			train_lm(self.net, self.samples_list, 1000, 1e-7, 1e-5, 2, save_toggle, path_weight = self.path_weight, path_log = self.path_log)
+			# third input: maximum epoch; fourth input: tolerance; fifth: starting lambda parameter; sixth: factor to change lambda
+			train_lm(self.net, self.samples_list, 1000, 1e-7, 1e-2, 2, save_toggle, path_weight = self.path_weight, path_log = self.path_log)
 		elif self.opt_toggle == "lbfgs":
 			train_lbfgs(self.net, self.Xs_list, self.us_list, 1000, 1e-9, save_toggle, m=100, path_weight = self.path_weight, path_log = self.path_log)
 		elif self.opt_toggle == "sgd":

@@ -1,0 +1,279 @@
+\documentclass{article}
+
+%\oddsidemargin=0pt
+%\evensidemargin=0pt
+%\topmargin=0pt
+%\setlength{\textwidth}{6.2in}
+\usepackage[utf8]{inputenc}
+\usepackage{subcaption}
+\usepackage{enumerate}
+\usepackage[shortlabels]{enumitem}
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage[normalem]{ulem}
+\usepackage{titlesec,bbm, hyperref}
+\usepackage{spverbatim} 
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{float}
+\usepackage{bm}
+\usepackage{multirow}
+\usepackage[margin=1in]{geometry}
+\usepackage{algorithmic}
+\usepackage{tikz}
+\usepackage{listings}
+\lstset{language=Matlab}
+\usepackage{color} %red, green, blue, yellow, cyan, magenta, black, white
+\definecolor{mygreen}{RGB}{28,172,0} % color values Red, Green, Blue
+\definecolor{mylilas}{RGB}{170,55,241}
+\usepackage{hyperref}
+\usepackage{pdfpages}
+
+\newcommand{\R}{\mathbb R}
+\newcommand{\C}{\mathbb C}
+\newcommand{\Q}{\mathbb Q}
+\newcommand{\N}{\mathbb N}
+\newcommand{\Z}{\mathbb Z}
+\newcommand{\norm}[1]{\left\vert #1 \right \vert}
+\newcommand{\Norm}[1]{\left\Vert #1 \right \Vert}
+\newcommand*\Laplace{\mathop{}\!\mathbin\bigtriangleup}
+\newcommand{\pt}{\partial_t}
+\newcommand{\px}{\partial_x}
+\newcommand{\pxt}{\partial_{xt}}
+\newcommand{\pu}{\partial_u}
+\newcommand{\pxi}{\partial_{\xi}}
+\newcommand{\py}{\partial_{y}}
+
+\newcommand{\bx}{\bm{x}}
+\newcommand{\by}{\bm{y}}
+\newcommand{\bz}{\bm{z}}
+\newcommand{\bp}{\bm{p}}
+\newcommand{\blambda}{\bm{\lambda}}
+\newcommand{\bw}{\bm{w}}
+\newcommand{\bb}{\bm{b}}
+\newcommand{\bxi}{\bm{\xi}}
+
+\title{Guide to Python3}
+\author{Jiajing Guan}
+\begin{document}
+\maketitle
+
+\section{Requirement}
+The code attached is run on Python 3.8. There are some differences between Python 2.7 and Python 3.x. Please verify the version of Python installed by running the following command before starting:
+\begin{center}
+\texttt{python --version}
+\end{center}
+
+Most matrix operations rely on Numpy and Scipy package of Python. The most common way of installing packages of Python is by running \texttt{pip}. One can check if \texttt{pip} has been installed by running:
+\begin{center}
+\texttt{python -m pip --version}
+\end{center}
+
+If \texttt{pip} is not installed, here is a useful link for installing \texttt{pip}: \href{https://pip.pypa.io/en/stable/installing/}{Link}. \\
+
+Now that \texttt{pip} has been installed, run the following command to install Numpy and Scipy:
+\begin{center}
+\texttt{pip install numpy}\\
+\texttt{pip install scipy}
+\end{center}
+
+We will need to use Python to plot a figure later. So while we are at it, run the following command to install matplotlib:
+\begin{center}
+\texttt{pip install matplotlib}
+\end{center}
+
+Once Numpy is installed, we can import the package in the preamble section by:
+\begin{center}
+\texttt{import numpy as np}\\
+\texttt{import matplotlib.pyplot as plt }
+\end{center}
+
+We have several functions that need to be imported. Also add these lines in the preamble:
+\begin{center}
+\texttt{from scipy import sparse}\\
+\texttt{from scipy.sparse.linalg import spsolve}
+\end{center}
+
+Later when we call functions defined in Numpy, we will just use \texttt{np.(function\_name)}. 
+
+\section{Sample code that performs FDM}
+To demostrate the basic functionality of Python3, we will use Finite Difference Method to solve the following ODE problem:
+\begin{equation}
+\begin{split}
+-\xi u^{''}+u^{'} &= 0 \quad \text{for }x\in (0,1)\\
+u(0) &= 1-e^{-1/\xi}\\
+u(1) &= 0
+\end{split}
+\label{eq:1d_cd}
+\end{equation}
+Here, the parameter is $\xi=10^{a}$, where $a$ is chosen from a uniform distribution of $[-4,0]$. \\
+
+My usually habit in using Python3 is to create different problems as separate classes. Inside the class, I will define different functions that fulfill different purposes. When I wish to call the functions, I will create a class instance and call functions on the instance. We will go into details about how to call functions later. \\
+
+First, let's consider what input FDM would need. We need to define the stepsize $h$ and parameter $\xi$. To make the class as flexible as possible, we want to treat $\xi$ as an input to functions, not class, so that we could run functions to compute approximations with different $\xi$ without instantiating the class every time. Now let's set up the class:
+\begin{lstlisting}
+class CD_1D:
+	def __init__(self, h):
+		self.h = h
+		self.N = int(1/self.h)+1
+		self.nx = self.N-2
+		self.X = np.linspace(0,1,num=self.N)
+\end{lstlisting}
+
+In Python, if one wants to declare a class, one usually needs a function named \texttt{\_\_init\_\_}. This is where the inputs to the class will go and this function is automatically called when the class is instantiated. In the code above, we can see that the input $h$ is saved to \texttt{self.h}. Any variable prefixed by \texttt{self.} can be accessed within the class. Now any functions inside this class can access $h$ by calling \texttt{self.h}. We also create some essential variables that are useful, such as \texttt{self.N} (the total number of discretized points in $[0,1]$), \texttt{self.nx} (the number of interior points) and \texttt{self.X} (the discretized points in $[0,1]$). \\
+
+We know that the FDM solve can be obtained by the following equation:
+\begin{align*}
+AU &= F\\
+\begin{bmatrix}
+\frac{2\xi}{h^2} & \frac{1}{2h}-\frac{\xi}{h^2} &  &  &  \\
+-\frac{1}{2h}-\frac{\xi}{h^2} & \frac{2\xi}{h^2} & \frac{1}{2h}-\frac{\xi}{h^2} &  &  \\
+ & \ddots & \ddots & \ddots &  \\
+ &  & -\frac{1}{2h}-\frac{\xi}{h^2} & \frac{2\xi}{h^2} & \frac{1}{2h}-\frac{\xi}{h^2}\\
+ &  &  & -\frac{1}{2h}-\frac{\xi}{h^2} & \frac{2\xi}{h^2}
+\end{bmatrix}
+\begin{bmatrix}
+u_1\\
+u_2\\
+\vdots\\
+\vdots\\
+u_{N-1}
+\end{bmatrix} &=
+\begin{bmatrix}
+(\frac{1}{2h}+\frac{\xi}{h^2})(1-e^{-1/\xi})\\
+0\\
+\vdots\\
+\vdots\\
+0
+\end{bmatrix}\\
+\frac{\xi}{h^2}\begin{bmatrix}
+2 & -(1-\frac{h}{2\xi}) &  &  &  \\
+-(1+\frac{h}{2\xi}) & 2 & -(1-\frac{h}{2\xi}) &  &  \\
+ & \ddots & \ddots & \ddots &  \\
+ &  & -(1+\frac{h}{2\xi}) & 2 & -(1-\frac{h}{2\xi})\\
+ &  &  & -(1+\frac{h}{2\xi}) & 2
+\end{bmatrix}
+\begin{bmatrix}
+u_1\\
+u_2\\
+\vdots\\
+\vdots\\
+u_{N-1}
+\end{bmatrix} &=
+\frac{\xi}{h^2}\begin{bmatrix}
+(1+\frac{h}{2\xi})(1-e^{-1/\xi})\\
+0\\
+\vdots\\
+\vdots\\
+0
+\end{bmatrix}\\
+\begin{bmatrix}
+2 & -(1-\frac{h}{2\xi}) &  &  &  \\
+-(1+\frac{h}{2\xi}) & 2 & -(1-\frac{h}{2\xi}) &  &  \\
+ & \ddots & \ddots & \ddots &  \\
+ &  & -(1+\frac{h}{2\xi}) & 2 & -(1-\frac{h}{2\xi})\\
+ &  &  & -(1+\frac{h}{2\xi}) & 2
+\end{bmatrix}
+\begin{bmatrix}
+u_1\\
+u_2\\
+\vdots\\
+\vdots\\
+u_{N-1}
+\end{bmatrix} &=
+\begin{bmatrix}
+(1+\frac{h}{2\xi})(1-e^{-1/\xi})\\
+0\\
+\vdots\\
+\vdots\\
+0
+\end{bmatrix}
+\end{align*}
+
+How do we create the sparse matrix $A$ and vector $F$? In Numpy and Scipy, there are a lot of functions very similar to the ones in Matlab. Like \texttt{spdiags} in Matlab, there is a function in Scipy that perform similarly, which can be called by \texttt{scipy.sparse.diags}. We can create $A$ by the following command:
+\begin{center}
+\begin{lstlisting}
+r = self.h/(2*xi)
+A = sparse.diags([-(1+r),2,-(1-r)],[-1,0,1],\
+	shape=(self.nx,self.nx), format = 'csr')
+\end{lstlisting}
+\end{center}
+
+Vector $F$ can be created by the following command:
+\begin{center}
+\texttt{F = np.zeros((self.nx,1))}\\
+\texttt{F[0] = (1+r)*(1-np.exp(-1/xi))} 
+\end{center}
+
+We can solve a sparse system by the function \texttt{spsolve} imported earlier. Putting everything together, we can write the function that solves this system with an input $\xi$ as:
+\begin{lstlisting}
+def generate_one_sol(self, xi):
+	r = self.h/(2*xi)
+	A = sparse.diags([-(1+r),2,-(1-r)],[-1,0,1],\
+		shape=(self.nx,self.nx), format = 'csr')
+	F = np.zeros((self.nx,1))
+	F[0] = (1+r)*(1-np.exp(-1/xi))
+	u = spsolve(A,F)
+	U = np.zeros((self.N,1))
+	U[1:-1,0] = u
+	U[0] = 1-np.exp(-1/xi)
+	return U
+\end{lstlisting}
+
+The last three lines before the return statement fills in the boundary conditions. Besides this FDM solver, we will add a function that produce the exact solution:
+\begin{lstlisting}
+def u_exact(self,xi):
+	u = 1-np.exp((self.X-1)/xi)
+	return u
+\end{lstlisting}
+
+Now that we have a class with a function that would use FDM to solve Equation \ref{eq:1d_cd}, how do we call it? What I usually do is to create a DEMO file that would call this class. But this time, to keep all code in one file, I will put what I usually write in another file under the line \texttt{if \_\_name\_\_ == "\_\_main\_\_":}. What this line does is that when Python is processing the script, it will treat the commands inside this if block as the main function and run it. \\
+
+In this main block, I want to run the \texttt{generate\_one\_sol} function on $h=1/2048$ and $\xi=0.1$. Then I will obtain the exact solution by running \texttt{u\_exact}. Lastly, I want to plot these two variables on one plot with the approximation plotted in red circles. To run these functions in class \texttt{CD\_1D}, we need to first instantiate the class by running:
+\begin{center}
+\texttt{env = CD\_1D(h)}
+\end{center}
+
+Then we will call functions by:
+\begin{center}
+\texttt{U = env.generate\_one\_sol(xi)}\\
+\texttt{U\_ex = env.u\_exact(xi)}
+\end{center}
+
+Now we will plot these quantities. A useful link is provided here: \href{https://matplotlib.org/tutorials/introductory/pyplot.html}{Link}. For the most part, this is very similar to Matlab plotting. The one thing we need to be careful about is that the figure can only be shown we call \texttt{plt.show()} at the end of the plotting block. The following commands will produce the desired figure:
+\begin{lstlisting}
+plt.plot(env.X,U,'ro')
+plt.plot(env.X,U_ex,'b')
+plt.ylabel('u')
+plt.xlabel('x')
+plt.show()
+\end{lstlisting}
+
+Putting everything together, the main function block is shown below:
+\begin{lstlisting}
+if __name__ == "__main__":
+	h = 1/2048
+	xi = 0.1
+	env = CD_1D(h)
+	U = env.generate_one_sol(xi)
+	U_ex = env.u_exact(xi)
+	plt.plot(env.X,U,'ro')
+	plt.plot(env.X,U_ex,'b')
+	plt.ylabel('u')
+	plt.xlabel('x')
+	plt.show()
+\end{lstlisting}
+
+Let's save this file as \texttt{CD\_1d.py}. To run this script, run the following command in the command line that is rooted in the same folder as the script:
+\begin{center}
+\texttt{python3 CD\_1d.py}
+\end{center}
+
+\section{Main differences between Matlab and Python}
+The first difference, and probably the biggest difference, is that Python is sensitive to indentation. The indentation level determines the block structure. \\
+
+The second difference is on how array can be sliced. Besides starting index from 0, Python slicing cuts off before the ending index. For example, the line \texttt{U[1:-1,0]} will access the second to the second to last indexed entries in the first column of \texttt{U}, not the second to the last entry in \texttt{U}. I found myself always confused by this difference so it is a good idea to run commands on simple examples to verify that the slicing does exactly what you want it to do before putting them in your code. \\
+
+The last point, not difference, I want to make is that I found the Numpy package to be very similar to Matlab commands. Most times, if I want to find the Python substitute for a Matlab function, I just google ``numpy {Matlab function name}''. Nine times out of ten, I could find a function for it.  
+
+\end{document}

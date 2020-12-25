@@ -12,13 +12,12 @@ from mpl_toolkits.mplot3d import Axes3D
 tf.random.set_seed(5)
 
 class NN_tf:
-	def __init__(self, input_size, output_size, layers, env, regular_alphas):
+	def __init__(self, input_size, output_size, layers, env):
 		self.env = env
 		self.name = "DNN"
 		self.input_size = input_size
 		self.output_size = output_size
 		self.layers = layers
-		self.regular_alphas = regular_alphas
 		self.lb = tf.constant(self.env.lb, dtype = tf.float32)
 		self.ub = tf.constant(self.env.ub, dtype = tf.float32)
 		self.initialize_NN()
@@ -135,7 +134,7 @@ class NN_tf:
 		return err
 
 	# @tf.function
-	def loss(self, samples_list, save_toggle = False):
+	def loss(self, samples_list):
 		loss_val = tf.constant(0, dtype = tf.float32)
 		for i in range(len(samples_list)):
 			dict_i = samples_list[i]
@@ -153,18 +152,12 @@ class NN_tf:
 				f_u = f_res*np.sqrt(weight/N)
 				loss_f = tf.math.reduce_sum(f_u**2)/2
 				loss_val = loss_val + loss_f
-				if save_toggle:
-					pass
-					# self.loss_f_list.append(loss_f.numpy())
 
 			elif name_i == "B_D":
 				err_do = self.compute_solution(x_tf, y_tf, t_tf, xi_tf, target)
 				err_d = err_do*np.sqrt(weight/N)
 				loss_d = tf.math.reduce_sum(err_d**2)/2
 				loss_val = loss_val + loss_d
-				if save_toggle:
-					pass
-					# self.loss_b_d_list.append(loss_d.numpy())
 					
 			elif name_i == "B_N":
 				err_n = self.compute_neumann(x_tf, y_tf, t_tf, xi_tf,target)
@@ -246,19 +239,6 @@ class NN_tf:
 		grads_tol_W = tf.transpose(tf.concat(weights_grads, axis = -1))
 		grads_tol_b = tf.transpose(tf.concat(biases_grads, axis = -1))
 		return loss_val, grads_tol_W, grads_tol_b
-
-	def construct_Hessian(self, loss_val, tape_loss):		
-		num_layers = len(self.biases) 
-
-		with tape_loss:
-			loss_grad_W, loss_grad_b = self.construct_Gradient(loss_val, tape_loss)
-		hessian_W = tape_loss.jacobian(loss_grad_W, self.weights)
-		hessian_b = tape_loss.jacobian(loss_grad_b, self.biases)
-		hessian_W = tf.squeeze(tf.concat(hessian_W, axis = 3))
-		if hessian_b[-1] is None:
-			hessian_b[-1] = tf.zeros([self.biases_len, self.output_size, 1, self.output_size])
-		hessian_b = tf.squeeze(tf.concat(hessian_b, axis = 3))
-		return hessian_W, hessian_b
 		
 	def update_weights_biases(self, weights_update, biases_update):
 		num_layers = len(self.biases)

@@ -92,19 +92,18 @@ Let's consider what functions we would need in a neural network class. We will n
 Before going into the details of each part, we need to consider the necessary input to initialize a neural network class. We need to define the dimension of input and output, dimension of the hidden layers and the environment instance of the PDE problem. So we will setup the neural network class as:
 \begin{lstlisting}
 class NN_tf:
-	def __init__(self, input_size, output_size, layers, env, regular_alphas):
+	def __init__(self, input_size, output_size, layers, env):
 		self.env = env
 		self.name = "DNN"
 		self.input_size = input_size
 		self.output_size = output_size
 		self.layers = layers
-		self.regular_alphas = regular_alphas
 		self.lb = tf.constant(self.env.lb, dtype = tf.float32)
 		self.ub = tf.constant(self.env.ub, dtype = tf.float32)
 		self.initialize_NN()
 \end{lstlisting}
 
-The variable \texttt{regular\_alphas} is for the regularization parameter in the loss function. The \texttt{self.lb} and \texttt{self.ub} are lower and upper bounds of the input. We will use these variables later in the forward pass to normalize the input. The \texttt{self.initialize\_NN()} is the function that initialize the weights. 
+The \texttt{self.lb} and \texttt{self.ub} are lower and upper bounds of the input. We will use these variables later in the forward pass to normalize the input. The \texttt{self.initialize\_NN()} is the function that initialize the weights. 
 
 \subsection{Initialize Weights}
 Now we will talk about \texttt{self.initialize\_NN()} function. In my implementation, I put all the weights in one list and all the biases in another list. There are other ways to store these weights. In fact, Tensorflow has an almost out-of-the-box implementation for networks called \texttt{model}. I didn't want to use their implementation as it is harder to control the shape and initialization of the weights. But a useful link explaining how to use model is \href{https://www.tensorflow.org/tutorials/customization/custom_layers}{here}. \\
@@ -290,6 +289,6 @@ def construct_Jacobian_residual(self, x_tf, y_tf, t_tf, xi_tf, target, N, weight
 \section{Tensorflow Graph}
 In the \texttt{NN\_tf.py} file, you will see that a lot of functions have a \texttt{@tf.function} as the prefix. This declaration tells Tensorflow to compile the function and track the operations to create a graph on the function. Once a graph is created, if the same type of inputs are provided, Tensorflow will employ the previously constructed graph and the operations will become a streamline. This is extremely helpful because during the operation process, we need to take gradients and Jacobian matrices over and over again. The computational cost was significantly reduced ever since I used the Tensorflow graph. \\
 
-However, there is a caveat to \texttt{@tf.function}. Tensorflow will construct a new graph every time a different type of input is provided, which is time consuming. Also, Tensorflow has a hard time recognizing primitive Python data types. Thus, it is recommended to use Tensorflow constants or variables as inputs and outputs if one wants to use \texttt{@tf.function}。
+However, there is a caveat to \texttt{@tf.function}. Tensorflow will construct a new graph every time a different type of input is provided, which is time consuming. Also, Tensorflow has a hard time recognizing primitive Python data types. Thus, it is recommended to use Tensorflow constants or variables as inputs and outputs if one wants to use \texttt{@tf.function}.
 
 \end{document}

@@ -1,10 +1,10 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.21 (MiKTeX 20.12) (preloaded format=pdflatex 2020.12.23)  23 DEC 2020 17:15
+This is pdfTeX, Version 3.14159265-2.6-1.40.21 (MiKTeX 20.12) (preloaded format=pdflatex 2020.12.23)  25 DEC 2020 00:01
 entering extended mode
-**D:/Documents/GitHub/PPDE_Approximation/Log/Writeup/Python_guide/python_guide.
-tex
+**D:/Documents/GitHub/PPDE_Approximation/Log/Writeup/Tensorflow_guide/Tensorflo
+w_guide.tex
 
-(D:/Documents/GitHub/PPDE_Approximation/Log/Writeup/Python_guide/python_guide.t
-ex
+(D:/Documents/GitHub/PPDE_Approximation/Log/Writeup/Tensorflow_guide/Tensorflow
+_guide.tex
 LaTeX2e <2020-10-01> patch level 2
 L3 programming layer <2020-12-07> xparse <2020-03-03>
 ("D:\MiKTex 2.9\tex/latex/base\article.cls"
@@ -715,32 +715,32 @@ File: pppdftex.def 2020/01/28 v0.5q Pdfpages driver for pdfTeX (AM)
 File: l3backend-pdftex.def 2020-09-24 L3 backend support: PDF output (pdfTeX)
 \l__kernel_color_stack_int=\count323
 \l__pdf_internal_box=\box71
-) (python_guide.aux)
-\openout1 = `python_guide.aux'.
+)
+(Tensorflow_guide.aux)
+\openout1 = `Tensorflow_guide.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 58.
-LaTeX Font Info:    ... okay on input line 58.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 58.
-LaTeX Font Info:    ... okay on input line 58.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 58.
-LaTeX Font Info:    ... okay on input line 58.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 58.
-LaTeX Font Info:    ... okay on input line 58.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 58.
-LaTeX Font Info:    ... okay on input line 58.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 58.
-LaTeX Font Info:    ... okay on input line 58.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 58.
-LaTeX Font Info:    ... okay on input line 58.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 58.
-LaTeX Font Info:    ... okay on input line 58.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 60.
+LaTeX Font Info:    ... okay on input line 60.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 60.
+LaTeX Font Info:    ... okay on input line 60.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 60.
+LaTeX Font Info:    ... okay on input line 60.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 60.
+LaTeX Font Info:    ... okay on input line 60.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 60.
+LaTeX Font Info:    ... okay on input line 60.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 60.
+LaTeX Font Info:    ... okay on input line 60.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 60.
+LaTeX Font Info:    ... okay on input line 60.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 60.
+LaTeX Font Info:    ... okay on input line 60.
 Package caption Info: Begin \AtBeginDocument code.
 Package caption Info: float package is loaded.
 Package caption Info: hyperref package is loaded.
 Package caption Info: listings package is loaded.
 Package caption Info: End \AtBeginDocument code.
-
-("D:\MiKTex 2.9\tex/context/base/mkii\supp-pdf.mkii"
+ ("D:\MiKTex 2.9\tex/context/base/mkii\supp-pdf.mkii"
 [Loading MPS to PDF converter (version 2006.09.02).]
 \scratchcounter=\count324
 \scratchdimen=\dimen295
@@ -758,7 +758,7 @@ Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
 Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
 85.
 )
-Package hyperref Info: Link coloring OFF on input line 58.
+Package hyperref Info: Link coloring OFF on input line 60.
 
 ("D:\MiKTex 2.9\tex/latex/hyperref\nameref.sty"
 Package: nameref 2019/09/16 v2.46 Cross-referencing by name of section
@@ -771,13 +771,13 @@ Package: gettitlestring 2019/12/15 v1.6 Cleanup title references (HO)
 )
 \c@section@level=\count330
 )
-LaTeX Info: Redefining \ref on input line 58.
-LaTeX Info: Redefining \pageref on input line 58.
-LaTeX Info: Redefining \nameref on input line 58.
+LaTeX Info: Redefining \ref on input line 60.
+LaTeX Info: Redefining \pageref on input line 60.
+LaTeX Info: Redefining \nameref on input line 60.
 
-(python_guide.out) (python_guide.out)
+(Tensorflow_guide.out) (Tensorflow_guide.out)
 \@outlinefile=\write4
-\openout4 = `python_guide.out'.
+\openout4 = `Tensorflow_guide.out'.
 
 
 *geometry* driver: auto-detecting
@@ -823,88 +823,163 @@ Package: lscape 2020/05/28 v3.02 Landscape Pages (DPC)
 )
 Package pdflscape Info: Auto-detected driver: pdftex on input line 81.
 )
-LaTeX Font Info:    Trying to load font information for U+msa on input line 60.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 62.
 
 
 ("D:\MiKTex 2.9\tex/latex/amsfonts\umsa.fd"
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 60.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 62.
 
 
 ("D:\MiKTex 2.9\tex/latex/amsfonts\umsb.fd"
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
-Underfull \hbox (badness 10000) in paragraph at lines 72--73
+Underfull \hbox (badness 10000) in paragraph at lines 85--86
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 108--110
+Underfull \hbox (badness 10000) in paragraph at lines 90--91
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 111--112
-
+Overfull \hbox (16.24992pt too wide) in paragraph at lines 95--96
+[][][][][][][][][][][][][][][][][][][][][][][][][] 
  []
 
 [1
 
 {C:/Users/jiaji/AppData/Local/MiKTeX/2.9/pdftex/config/pdftex.map}]
-Underfull \hbox (badness 10000) in paragraph at lines 123--124
+Underfull \hbox (badness 10000) in paragraph at lines 110--111
 
  []
 
 LaTeX Font Info:    Trying to load font information for OMS+cmr on input line 1
-97.
+16.
 ("D:\MiKTex 2.9\tex/latex/base\omscmr.fd"
 File: omscmr.fd 2019/12/16 v2.5j Standard LaTeX font definitions
 )
 LaTeX Font Info:    Font shape `OMS/cmr/m/n' in size <10> not available
-(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 197.
- [2]
-Underfull \hbox (badness 10000) in paragraph at lines 230--231
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 116.
 
+Underfull \hbox (badness 10000) in paragraph at lines 120--121
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 122--123
+
+ []
+
+[2]
+Underfull \hbox (badness 10000) in paragraph at lines 153--154
+
+ []
+
+
+Overfull \hbox (46.25023pt too wide) in paragraph at lines 172--173
+[][][][][][][][][][][][][][][][][][][][][][][][][][] 
  []
 
 [3]
-Underfull \hbox (badness 10000) in paragraph at lines 273--274
+Overfull \hbox (52.25029pt too wide) in paragraph at lines 178--179
+[][][][][][][][][][][][][][][][][][][][][][][][][][] 
+ []
+
+
+Overfull \hbox (34.2501pt too wide) in paragraph at lines 184--185
+[][][][][][][][][][][][][][][][][][][][][][][][][] 
+ []
+
+
+Overfull \hbox (46.25023pt too wide) in paragraph at lines 190--191
+[][][][][][][][][][][][][][][][][][][][][][][][][][] 
+ []
+
+
+Overfull \hbox (10.24986pt too wide) in paragraph at lines 210--211
+[][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][] 
+ []
+
+
+Overfull \hbox (40.25017pt too wide) in paragraph at lines 211--212
+[][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][
+][][][] 
+ []
+
+
+Overfull \hbox (10.24986pt too wide) in paragraph at lines 217--218
+[][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][] 
+ []
+
+[4]
+Underfull \hbox (badness 10000) in paragraph at lines 236--237
+
+ []
+
+[5]
+Overfull \hbox (22.24998pt too wide) in paragraph at lines 274--275
+[][][][][][][][][][][][][][][][][][][][][][][][][][][][][][] 
+ []
+
+
+Overfull \hbox (34.2501pt too wide) in paragraph at lines 282--283
+[][][][][][][][][][][][][][][][][][][][][] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 291--292
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 275--276
+! Package inputenc Error: Unicode character 。 (U+3002)
+(inputenc)                not set up for use with LaTeX.
 
- []
+See the inputenc package documentation for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.293 ...one wants to use \texttt{@tf.function}。
+                                                  
+You may provide a definition with
+\DeclareUnicodeCharacter 
 
-[4] (python_guide.aux)
-Package rerunfilecheck Info: File `python_guide.out' has not changed.
-(rerunfilecheck)             Checksum: 06DD36E9BF5C2FDF5C112FB523427B7E;187.
+[6] (Tensorflow_guide.aux)
+
+Package rerunfilecheck Warning: File `Tensorflow_guide.out' has changed.
+(rerunfilecheck)                Rerun to get outlines right
+(rerunfilecheck)                or use package `bookmark'.
+
+Package rerunfilecheck Info: Checksums for `Tensorflow_guide.out':
+(rerunfilecheck)             Before: 4E2564937E68F1B28B7938648143A712;383
+(rerunfilecheck)             After:  66577D9704C8241B30BA53EEB123FFAA;434.
  ) 
 Here is how much of TeX's memory you used:
- 22385 strings out of 479662
- 394792 string characters out of 2880592
- 889679 words of memory out of 3000000
- 39003 multiletter control sequences out of 15000+200000
+ 22578 strings out of 479662
+ 397503 string characters out of 2880592
+ 908684 words of memory out of 3000000
+ 39097 multiletter control sequences out of 15000+200000
  416813 words of font info for 77 fonts, out of 3000000 for 9000
  1141 hyphenation exceptions out of 8191
- 80i,17n,85p,806b,1758s stack positions out of 5000i,500n,10000p,200000b,50000s
+ 80i,15n,85p,1180b,2314s stack positions out of 5000i,500n,10000p,200000b,50000s
  <C:\Users\jiaji\AppData\Local\MiKTeX\2.9\fonts/pk/ljfour/jknappen/ec/dpi600\
 tcrm1000.pk><D:/MiKTex 2.9/fonts/type1/public/amsfonts/cm/cmbx10.pfb><D:/MiKTex
  2.9/fonts/type1/public/amsfonts/cm/cmbx12.pfb><D:/MiKTex 2.9/fonts/type1/publi
-c/amsfonts/cm/cmex10.pfb><D:/MiKTex 2.9/fonts/type1/public/amsfonts/cm/cmmi10.p
-fb><D:/MiKTex 2.9/fonts/type1/public/amsfonts/cm/cmmi7.pfb><D:/MiKTex 2.9/fonts
-/type1/public/amsfonts/cm/cmr10.pfb><D:/MiKTex 2.9/fonts/type1/public/amsfonts/
-cm/cmr12.pfb><D:/MiKTex 2.9/fonts/type1/public/amsfonts/cm/cmr17.pfb><D:/MiKTex
- 2.9/fonts/type1/public/amsfonts/cm/cmr5.pfb><D:/MiKTex 2.9/fonts/type1/public/
-amsfonts/cm/cmr7.pfb><D:/MiKTex 2.9/fonts/type1/public/amsfonts/cm/cmsy10.pfb><
-D:/MiKTex 2.9/fonts/type1/public/amsfonts/cm/cmsy5.pfb><D:/MiKTex 2.9/fonts/typ
-e1/public/amsfonts/cm/cmsy7.pfb><D:/MiKTex 2.9/fonts/type1/public/amsfonts/cm/c
-mtt10.pfb>
-Output written on python_guide.pdf (4 pages, 176278 bytes).
+c/amsfonts/cm/cmmi10.pfb><D:/MiKTex 2.9/fonts/type1/public/amsfonts/cm/cmmi5.pf
+b><D:/MiKTex 2.9/fonts/type1/public/amsfonts/cm/cmmi7.pfb><D:/MiKTex 2.9/fonts/
+type1/public/amsfonts/cm/cmmib10.pfb><D:/MiKTex 2.9/fonts/type1/public/amsfonts
+/cm/cmr10.pfb><D:/MiKTex 2.9/fonts/type1/public/amsfonts/cm/cmr12.pfb><D:/MiKTe
+x 2.9/fonts/type1/public/amsfonts/cm/cmr17.pfb><D:/MiKTex 2.9/fonts/type1/publi
+c/amsfonts/cm/cmr5.pfb><D:/MiKTex 2.9/fonts/type1/public/amsfonts/cm/cmr7.pfb><
+D:/MiKTex 2.9/fonts/type1/public/amsfonts/cm/cmsy10.pfb><D:/MiKTex 2.9/fonts/ty
+pe1/public/amsfonts/cm/cmsy7.pfb><D:/MiKTex 2.9/fonts/type1/public/amsfonts/cm/
+cmtt10.pfb>
+Output written on Tensorflow_guide.pdf (6 pages, 210554 bytes).
 PDF statistics:
- 161 PDF objects out of 1000 (max. 8388607)
- 54 named destinations out of 1000 (max. 500000)
- 37 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 295 PDF objects out of 1000 (max. 8388607)
+ 153 named destinations out of 1000 (max. 500000)
+ 61 words of extra memory for PDF output out of 10000 (max. 10000000)
 

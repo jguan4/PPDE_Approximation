@@ -13,7 +13,7 @@ import csv
 
 
 class Burgers_Equation:
-	def __init__(self,N_p_train,N_p_test,h,inner = False, sampling_method = 0, path_env = "./Environments/", L = 0):
+	def __init__(self,N_p_train,N_p_test,h,type_weighting = [1,1,1,1], inner = False, sampling_method = 0, path_env = "./Environments/", L = 0):
 		# self.N_p = N_p
 		self.name = "Burger"
 		self.sampling_method = sampling_method
@@ -26,6 +26,7 @@ class Burgers_Equation:
 		self.x_p_domain = np.array([[-1, 1], [0, 1], [-3, -2]])
 		self.path_env = path_env
 		self.L = L
+		self.type_weighting = type_weighting
 		
 		# POD setting
 		if self.sampling_method == 0:
@@ -228,7 +229,8 @@ class Burgers_Equation:
 		t_tf = tf.constant((),shape = (self.N_p_train,0),dtype = tf.float32)
 		x_tf = tf.constant((),shape = (self.N_p_train,0),dtype = tf.float32)
 		N = tf.constant(self.N_p_train, dtype = tf.float32)
-		self.X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'Init'}
+		weight = tf.constant(self.type_weighting[3], dtype = tf.float32)
+		self.X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'Init', 'weight':weight}
 		samples_list = [self.X0_dict]
 		return samples_list
 	
@@ -238,7 +240,8 @@ class Burgers_Equation:
 		t_tf = tf.constant((),shape = (self.N_p_test,0),dtype = tf.float32)
 		x_tf = tf.constant((),shape = (self.N_p_test,0),dtype = tf.float32)
 		N = tf.constant(self.N_p_test, dtype = tf.float32)
-		X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'N':N, 'type':'Init'}
+		weight = tf.constant(self.type_weighting[3], dtype = tf.float32)
+		X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'N':N, 'type':'Init', 'weight':weight}
 		return X0_dict, self.u_tests
 
 	def generate_PINN_samples(self):
@@ -293,7 +296,8 @@ class Burgers_Equation:
 		xi_tf = tf.constant(self.Xf[:,[2]],dtype = tf.float32)
 		target_tf = tf.constant(target_f, dtype = tf.float32)
 		N = tf.constant(self.Nf, dtype = tf.float32)
-		self.Xf_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'Res'}
+		weight = tf.constant(self.type_weighting[0], dtype = tf.float32)
+		self.Xf_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'Res', 'weight':weight}
 		samples_list.append(self.Xf_dict)
 
 		x_tf = tf.constant(self.Xb_d[:,[0]],dtype = tf.float32)
@@ -302,7 +306,8 @@ class Burgers_Equation:
 		xi_tf = tf.constant(self.Xb_d[:,[2]],dtype = tf.float32)
 		target_tf = tf.constant(self.ub_d, dtype = tf.float32)
 		N = tf.constant(self.Nb, dtype = tf.float32)
-		self.Xb_d_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'B_D'}
+		weight = tf.constant(self.type_weighting[1], dtype = tf.float32)
+		self.Xb_d_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'B_D', 'weight':weight}
 		samples_list.append(self.Xb_d_dict)
 
 		x_tf = tf.constant(self.X0[:,[0]],dtype = tf.float32)
@@ -311,7 +316,8 @@ class Burgers_Equation:
 		xi_tf = tf.constant(self.X0[:,[2]],dtype = tf.float32)
 		target_tf = tf.constant(self.u0, dtype = tf.float32)
 		N = tf.constant(self.N0, dtype = tf.float32)
-		self.X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':"Init"}
+		weight = tf.constant(self.type_weighting[3], dtype = tf.float32)
+		self.X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':"Init", 'weight':weight}
 		samples_list.append(self.X0_dict)
 		return samples_list
 
@@ -323,7 +329,8 @@ class Burgers_Equation:
 		xi_tf = tf.constant(self.N0_tests[:,[2]],dtype = tf.float32)
 		target_tf = tf.constant(self.u0_tests, dtype = tf.float32)
 		N = tf.constant(N, dtype = tf.float32)
-		X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':"Init"}
+		weight = tf.constant(self.type_weighting[3], dtype = tf.float32)
+		X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':"Init", 'weight':weight }
 		return X0_dict, target_tf
 
 	def test_NN(self, net, record_path = None):

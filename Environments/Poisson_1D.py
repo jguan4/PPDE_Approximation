@@ -10,7 +10,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import csv
 
 class Poisson_1D:
-	def __init__(self, N_p_train, N_p_test, h, inner = False, sampling_method = 0, path_env = "./Environments/", L = 0):
+	def __init__(self, N_p_train, N_p_test, h,type_weighting = [1,1,1,1], inner = False, sampling_method = 0, path_env = "./Environments/", L = 0):
 		self.name = "Poisson"
 		self.sampling_method = sampling_method
 		self.u_dim = 1
@@ -21,6 +21,7 @@ class Poisson_1D:
 		self.plimits = plimits = np.array([[1.0, 3.0], [1.0, 3.0], [-0.5,0.5]])
 		self.x_p_domain = np.array([[-np.pi/2,np.pi/2], [1.0, 3.0], [1.0, 3.0], [-0.5,0.5]])
 		self.path_env = path_env
+		self.type_weighting = type_weighting
 
 		if self.sampling_method == 0:
 			self.lb = np.array([1.0, 1.0, -0.5])
@@ -189,7 +190,8 @@ class Poisson_1D:
 		t_tf = tf.constant((),shape = (self.N_p_train,0),dtype = tf.float32)
 		x_tf = tf.constant((),shape = (self.N_p_train,0),dtype = tf.float32)
 		N = tf.constant(self.N_p_train, dtype = tf.float32)
-		self.X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'Init'}
+		weight = tf.constant(self.type_weighting[3], dtype = tf.float32)
+		self.X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'Init', 'weight':weight}
 		samples_list = [self.X0_dict]
 		return samples_list
 	
@@ -199,7 +201,8 @@ class Poisson_1D:
 		t_tf = tf.constant((),shape = (self.N_p_test,0),dtype = tf.float32)
 		x_tf = tf.constant((),shape = (self.N_p_test,0),dtype = tf.float32)
 		N = tf.constant(self.N_p_test, dtype = tf.float32)
-		X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'N':N, 'type':'Init'}
+		weight = tf.constant(self.type_weighting[3], dtype = tf.float32)
+		X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'N':N, 'type':'Init', 'weight':weight}
 		return X0_dict, self.u_tests
 
 	def generate_PINN_samples(self):
@@ -256,7 +259,8 @@ class Poisson_1D:
 		xi_tf = tf.constant(self.Xf[:,1::],dtype = tf.float32)
 		target_tf = tf.constant(target_f, dtype = tf.float32)
 		N = tf.constant(self.Nf, dtype = tf.float32)
-		self.Xf_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'Res'}
+		weight = tf.constant(self.type_weighting[0], dtype = tf.float32)
+		self.Xf_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'Res', 'weight':weight}
 		samples_list.append(self.Xf_dict)
 
 		y_tf = tf.constant((),shape = (self.Nb,0),dtype = tf.float32)
@@ -265,7 +269,8 @@ class Poisson_1D:
 		xi_tf = tf.constant(self.Xb_d[:,1::],dtype = tf.float32)
 		target_tf = tf.constant(self.ub_d, dtype = tf.float32)
 		N = tf.constant(self.Nb, dtype = tf.float32)
-		self.Xb_d_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'B_D'}
+		weight = tf.constant(self.type_weighting[1], dtype = tf.float32)
+		self.Xb_d_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'B_D', 'weight':weight}
 		samples_list.append(self.Xb_d_dict)
 
 		if self.N0>0:
@@ -275,7 +280,8 @@ class Poisson_1D:
 			xi_tf = tf.constant(self.X0[:,1::],dtype = tf.float32)
 			target_tf = tf.constant(self.u0, dtype = tf.float32)
 			N = tf.constant(self.N0, dtype = tf.float32)
-			self.X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':"Init"}
+			weight = tf.constant(self.type_weighting[3], dtype = tf.float32)
+			self.X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':"Init", 'weight':weight}
 			samples_list.append(self.X0_dict)
 		return samples_list
 
@@ -287,7 +293,8 @@ class Poisson_1D:
 		xi_tf = tf.constant(self.N0_tests[:,1::],dtype = tf.float32)
 		target_tf = tf.constant(self.u0_tests, dtype = tf.float32)
 		N = tf.constant(N, dtype = tf.float32)
-		X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':"Init"}
+		weight = tf.constant(self.type_weighting[3], dtype = tf.float32)
+		X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':"Init", 'weight':weight}
 		return X0_dict, target_tf
 
 	def test_NN(self, net, record_path = None):

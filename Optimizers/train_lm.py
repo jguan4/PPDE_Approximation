@@ -50,15 +50,16 @@ def construct_tol_Jacobian(net, samples_list, batch_lim):
 			xi_i = sample_i["xi_tf"]
 			output_i = sample_i["target"]
 			N = sample_i["N"]
+			weight = sample_i["weight"]
 	
 			if Ntr_name_i == "Res":
-				jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_residual(x_i, y_i, t_i, xi_i, output_i, N)
+				jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_residual(x_i, y_i, t_i, xi_i, output_i, N, weight)
 			elif Ntr_name_i == "B_N":
-				jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_neumann(x_i, y_i, t_i, xi_i, output_i, N)
+				jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_neumann(x_i, y_i, t_i, xi_i, output_i, N, weight)
 			elif Ntr_name_i == "Init":
-				jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_solution(x_i, y_i, t_i, xi_i, output_i, N)
+				jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_solution(x_i, y_i, t_i, xi_i, output_i, N, weight)
 			elif Ntr_name_i == "B_D":
-				jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_dirichlet(x_i, y_i, t_i, xi_i, output_i, N)
+				jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_dirichlet(x_i, y_i, t_i, xi_i, output_i, N, weight)
 
 			JJ_W1, JJ_b1, Je_W1, Je_b1 = compute_JJ(jacobs_tol_W, jacobs_tol_b, err_batch)
 			JJ_W = JJ_W + JJ_W1
@@ -73,6 +74,7 @@ def construct_tol_Jacobian(net, samples_list, batch_lim):
 			xi_i = sample_i["xi_tf"]
 			output_i = sample_i["target"]
 			N = sample_i["N"]
+			weight = sample_i["weight"]
 
 			for j in range(tf.dtypes.cast(N_int/batch_lim, tf.int32)):
 				start_ind = j*batch_lim
@@ -84,13 +86,13 @@ def construct_tol_Jacobian(net, samples_list, batch_lim):
 				xi_batch = xi_i[start_ind:end_ind, 0::]
 
 				if Ntr_name_i == "Res":
-					jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_residual(x_batch, y_batch, t_batch, xi_batch, target, N)
+					jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_residual(x_batch, y_batch, t_batch, xi_batch, target, N, weight)
 				elif Ntr_name_i == "B_N":
-					jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_neumann(x_batch, y_batch, t_batch, xi_batch, target, N)
+					jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_neumann(x_batch, y_batch, t_batch, xi_batch, target, N, weight)
 				elif Ntr_name_i == "Init":
-					jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_solution(x_batch, y_batch, t_batch, xi_batch, target, N)
+					jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_solution(x_batch, y_batch, t_batch, xi_batch, target, N, weight)
 				elif Ntr_name_i == "B_D":
-					jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_dirichlet(x_i, y_i, t_i, xi_i, output_i, N)
+					jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_dirichlet(x_i, y_i, t_i, xi_i, output_i, N, weight)
 
 				JJ_W1, JJ_b1, Je_W1, Je_b1 = compute_JJ(jacobs_tol_W, jacobs_tol_b, err_batch)
 				JJ_W = JJ_W + JJ_W1

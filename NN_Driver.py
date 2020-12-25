@@ -77,21 +77,21 @@ class NN_Driver:
 
 	def initialize_env(self):
 		if self.env_toggle == "Poisson":
-			self.env = Poisson_1D(self.Ntr, self.test_size, self.h, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+			self.env = Poisson_1D(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
 		elif self.env_toggle == "CD_steady":
-			self.env = CD_comp_steady(self.Ntr, self.test_size, self.h, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+			self.env = CD_comp_steady(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
 		elif self.env_toggle == "Burger":
-			self.env = Burgers_Equation(self.Ntr, self.test_size, self.h, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+			self.env = Burgers_Equation(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
 		elif self.env_toggle == "CD_1D":
-			self.env = CD_1D(self.Ntr, self.test_size, self.h, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+			self.env = CD_1D(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
 
 	def initialize_net(self):
 		if self.net_toggle == "Dense":
-			self.net = NN_tf(self.input_size, self.output_size, self.layers, self.env, self.Ntr, self.Ntr_t, self.Ntr_name, self.regular_alphas, self.type_weighting)
+			self.net = NN_tf(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
 		elif self.net_toggle == "Res":
-			self.net = ResNet_tf(self.input_size, self.output_size, self.layers, self.env, self.Ntr, self.Ntr_t, self.Ntr_name, self.regular_alphas, self.type_weighting)
+			self.net = ResNet_tf(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
 		elif self.net_toggle == "RNN":
-			self.net = RNN_tf(self.input_size, self.output_size, self.layers, self.env, self.Ntr, self.Ntr_t, self.Ntr_name, self.regular_alphas, self.type_weighting)
+			self.net = RNN_tf(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
 
 	def process_training_samples(self):
 		if self.net_toggle != "RNN":

@@ -1,0 +1,7 @@
+\BOOKMARK [1][-]{section.1}{Installation}{}% 1
+\BOOKMARK [1][-]{section.2}{Basic Concepts in Tensorflow}{}% 2
+\BOOKMARK [1][-]{section.3}{Neural Networks}{}% 3
+\BOOKMARK [2][-]{subsection.3.1}{Initialize Weights}{section.3}% 4
+\BOOKMARK [2][-]{subsection.3.2}{Forward Pass and Loss Function}{section.3}% 5
+\BOOKMARK [2][-]{subsection.3.3}{Gradient and Jacobian Matrix}{section.3}% 6
+\BOOKMARK [1][-]{section.4}{Tensorflow Graph}{}% 7

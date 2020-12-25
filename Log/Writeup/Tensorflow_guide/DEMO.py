@@ -30,7 +30,7 @@ net = NN_tf(env.state_space_size, env.output_space_size, layers, env)
 samples_list = env.generate_PINN_samples(Nf, Nd, N0, type_weighting)
 path_weight = PATH_W + "Layers{0}_Ntr{1}_h{2}_Weight{3}.npz".format(layers, Ntr, int(1/h), type_weighting)
 
-train = False # if True, we will start training and test; if False, we will load previously trained weights and test
+train = True # if True, we will start training and test; if False, we will load previously trained weights and test
 
 if train:
 	# parameters for training

@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.21 (MiKTeX 20.12) (preloaded format=pdflatex 2020.11.4)  25 DEC 2020 14:11
+This is pdfTeX, Version 3.14159265-2.6-1.40.21 (MiKTeX 20.12) (preloaded format=pdflatex 2020.11.4)  25 DEC 2020 14:41
 entering extended mode
 **./Tensorflow_guide.tex
 (Tensorflow_guide.tex
@@ -889,63 +889,73 @@ Underfull \hbox (badness 10000) in paragraph at lines 121--122
  []
 
 [2]
+Underfull \hbox (badness 10000) in paragraph at lines 134--136
+
+ []
+
+
 Underfull \hbox (badness 10000) in paragraph at lines 152--153
 
  []
 
 
-Overfull \hbox (46.25023pt too wide) in paragraph at lines 171--172
-[][][][][][][][][][][][][][][][][][][][][][][][][][] 
+Underfull \hbox (badness 10000) in paragraph at lines 154--155
+
  []
 
 [3]
-Overfull \hbox (52.25029pt too wide) in paragraph at lines 177--178
+Overfull \hbox (46.25023pt too wide) in paragraph at lines 173--174
 [][][][][][][][][][][][][][][][][][][][][][][][][][] 
  []
 
 
-Overfull \hbox (34.2501pt too wide) in paragraph at lines 183--184
+Overfull \hbox (52.25029pt too wide) in paragraph at lines 179--180
+[][][][][][][][][][][][][][][][][][][][][][][][][][] 
+ []
+
+
+Overfull \hbox (34.2501pt too wide) in paragraph at lines 185--186
 [][][][][][][][][][][][][][][][][][][][][][][][][] 
  []
 
 
-Overfull \hbox (46.25023pt too wide) in paragraph at lines 189--190
+Overfull \hbox (46.25023pt too wide) in paragraph at lines 191--192
 [][][][][][][][][][][][][][][][][][][][][][][][][][] 
  []
 
 
-Overfull \hbox (10.24986pt too wide) in paragraph at lines 209--210
+Overfull \hbox (10.24986pt too wide) in paragraph at lines 211--212
 [][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][] 
  []
 
 
-Overfull \hbox (40.25017pt too wide) in paragraph at lines 210--211
+Overfull \hbox (40.25017pt too wide) in paragraph at lines 212--213
 [][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][
 ][][][] 
  []
 
 
-Overfull \hbox (10.24986pt too wide) in paragraph at lines 216--217
+Overfull \hbox (10.24986pt too wide) in paragraph at lines 218--219
 [][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][] 
  []
 
 [4]
-Underfull \hbox (badness 10000) in paragraph at lines 235--236
+Underfull \hbox (badness 10000) in paragraph at lines 237--238
 
  []
 
 [5]
-Overfull \hbox (22.24998pt too wide) in paragraph at lines 273--274
+Overfull \hbox (22.24998pt too wide) in paragraph at lines 275--276
 [][][][][][][][][][][][][][][][][][][][][][][][][][][][][][] 
  []
 
 
-Overfull \hbox (34.2501pt too wide) in paragraph at lines 281--282
+Overfull \hbox (34.2501pt too wide) in paragraph at lines 283--284
 [][][][][][][][][][][][][][][][][][][][][] 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 290--291
+Underfull \hbox (badness 10000) in paragraph at lines 292--293
 
  []
 
@@ -956,7 +966,7 @@ Package rerunfilecheck Info: File `Tensorflow_guide.out' has not changed.
 Here is how much of TeX's memory you used:
  22637 strings out of 480232
  405453 string characters out of 2887616
- 904255 words of memory out of 3000000
+ 906255 words of memory out of 3000000
  38606 multiletter control sequences out of 15000+200000
  548471 words of font info for 79 fonts, out of 3000000 for 9000
  1141 hyphenation exceptions out of 8191
@@ -975,7 +985,7 @@ s/cm/cmr5.pfb></usr/local/share/miktex-texmf/fonts/type1/public/amsfonts/cm/cmr
 7.pfb></usr/local/share/miktex-texmf/fonts/type1/public/amsfonts/cm/cmsy10.pfb>
 </usr/local/share/miktex-texmf/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/l
 ocal/share/miktex-texmf/fonts/type1/public/amsfonts/cm/cmtt10.pfb>
-Output written on Tensorflow_guide.pdf (6 pages, 210455 bytes).
+Output written on Tensorflow_guide.pdf (6 pages, 210655 bytes).
 PDF statistics:
  297 PDF objects out of 1000 (max. 8388607)
  152 named destinations out of 1000 (max. 500000)

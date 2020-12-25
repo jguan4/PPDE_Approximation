@@ -67,7 +67,7 @@ class CD_1D:
 		self.ub_d = np.concatenate((ulb,urb),axis = 0)
 
 		if self.N0>0:
-			sampling_0 = LHS(xlimits = )
+			sampling_0 = LHS(xlimits = self.x_p_domain[0])
 			x = sampling_0(self.N0)
 			self.X0 = np.concatenate((x,1e-4*np.ones((self.N0,1))),axis = 1)
 			self.u0 = self.u_exact(self.X0)

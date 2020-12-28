@@ -113,7 +113,7 @@ class NN_Driver:
 			train_sgd(self.net, self.Xs_list, self.us_list, 1000, 1e-9, save_toggle, path_weight = self.path_weight, path_log = self.path_log)
 		print("Time for training: {0}".format(time.time()-self.start_time))
 
-	def test_nn(self, record_path = None):
+	def test_nn(self, N_test, record_path = None):
 		self.env.test_NN(self.net, record_path)
 		print("Time up to testing: {0}".format(time.time()-self.start_time))
 
@@ -128,5 +128,5 @@ class NN_Driver:
 		else:
 			self.net.load_weights_biases(path)
 
-	def plot_test(self, figure_path = None):
+	def plot_test(self, N_test, figure_path = None):
 		self.env.plot_NN(self.net, figure_path)

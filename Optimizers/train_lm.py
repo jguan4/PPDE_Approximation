@@ -17,8 +17,8 @@ def compute_W_b_update(net, JJ_W, JJ_b, grads_W_list, grads_b_list, mu):
 	grads_W_tol = grads_W_list 
 	grads_b_tol = grads_b_list 
 
-	JJ_W = JJ_W+(mu+net.regular_alphas[0])*tf.eye(net.weights_len)#W_reg_matrix
-	JJ_b = JJ_b+(mu+net.regular_alphas[0])*tf.eye(net.biases_len)
+	JJ_W = JJ_W+(mu+net.regular_alphas)*tf.eye(net.weights_len)#W_reg_matrix
+	JJ_b = JJ_b+(mu+net.regular_alphas)*tf.eye(net.biases_len)
 	W_update_tol = tf.linalg.solve(JJ_W, grads_W_tol)#/(np.sum(num_batches)*net.weights_len))
 	b_update_tol = tf.linalg.solve(JJ_b, grads_b_tol)#/(np.sum(num_batches)*net.weights_len))
 
@@ -56,10 +56,8 @@ def construct_tol_Jacobian(net, samples_list, batch_lim):
 				jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_residual(x_i, y_i, t_i, xi_i, output_i, N, weight)
 			elif Ntr_name_i == "B_N":
 				jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_neumann(x_i, y_i, t_i, xi_i, output_i, N, weight)
-			elif Ntr_name_i == "Init":
+			elif Ntr_name_i == "Init" or Ntr_name_i == "B_D":
 				jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_solution(x_i, y_i, t_i, xi_i, output_i, N, weight)
-			elif Ntr_name_i == "B_D":
-				jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_dirichlet(x_i, y_i, t_i, xi_i, output_i, N, weight)
 
 			JJ_W1, JJ_b1, Je_W1, Je_b1 = compute_JJ(jacobs_tol_W, jacobs_tol_b, err_batch)
 			JJ_W = JJ_W + JJ_W1
@@ -89,10 +87,8 @@ def construct_tol_Jacobian(net, samples_list, batch_lim):
 					jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_residual(x_batch, y_batch, t_batch, xi_batch, target, N, weight)
 				elif Ntr_name_i == "B_N":
 					jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_neumann(x_batch, y_batch, t_batch, xi_batch, target, N, weight)
-				elif Ntr_name_i == "Init":
+				elif Ntr_name_i == "Init" or Ntr_name_i == "B_D":
 					jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_solution(x_batch, y_batch, t_batch, xi_batch, target, N, weight)
-				elif Ntr_name_i == "B_D":
-					jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_dirichlet(x_i, y_i, t_i, xi_i, output_i, N, weight)
 
 				JJ_W1, JJ_b1, Je_W1, Je_b1 = compute_JJ(jacobs_tol_W, jacobs_tol_b, err_batch)
 				JJ_W = JJ_W + JJ_W1
@@ -123,21 +119,21 @@ def train_lm(net, samples_list, max_iter, tol, mu, beta, save_toggle, path_weigh
 	fval = []
 	grad_val = []
 	times = []
-	loss_f_list = []
-	loss_b_d_list = []
+	# loss_f_list = []
+	# loss_b_d_list = []
 
 	f_name = "f.csv"
 	grad_name = "grad.csv"
 	times_name = "times.csv"
-	loss_f_name = "loss_f.csv"
-	loss_b_d_name = "loss_b_d.csv"
+	# loss_f_name = "loss_f.csv"
+	# loss_b_d_name = "loss_b_d.csv"
 
 	if save_toggle == 1:
 		f_save_name = modify_filename(path_log,f_name)
 		grad_save_name = modify_filename(path_log,grad_name)
 		times_save_name = modify_filename(path_log,times_name)
-		loss_f_save_name = modify_filename(path_log,loss_f_name)
-		loss_b_d_save_name = modify_filename(path_log,loss_b_d_name)
+		# loss_f_save_name = modify_filename(path_log,loss_f_name)
+		# loss_b_d_save_name = modify_filename(path_log,loss_b_d_name)
 
 	if save_toggle == 2:
 		fval = np.loadtxt(f_save_name, delimiter="\n")
@@ -146,10 +142,10 @@ def train_lm(net, samples_list, max_iter, tol, mu, beta, save_toggle, path_weigh
 		grad_val = grad_val.tolist()
 		times = np.loadtxt(times_save_name, delimiter="\n")
 		times = times.tolist()
-		loss_f_list = np.loadtxt(loss_f_save_name, delimiter="\n")
-		loss_f_list = loss_f_list.tolist()
-		loss_b_d_save_name = np.loadtxt(loss_b_d_save_name, delimiter="\n")
-		loss_b_d_save_name = loss_b_d_save_name.tolist()
+		# loss_f_list = np.loadtxt(loss_f_save_name, delimiter="\n")
+		# loss_f_list = loss_f_list.tolist()
+		# loss_b_d_save_name = np.loadtxt(loss_b_d_save_name, delimiter="\n")
+		# loss_b_d_save_name = loss_b_d_save_name.tolist()
 	
 	loss_val_tf = net.loss(samples_list)
 	loss_val = loss_val_tf.numpy()
@@ -178,10 +174,10 @@ def train_lm(net, samples_list, max_iter, tol, mu, beta, save_toggle, path_weigh
 				np.savetxt(f_save_name, fval, delimiter =", ", fmt ='% s') 
 				np.savetxt(grad_save_name, grad_val, delimiter =", ", fmt ='% s') 
 				np.savetxt(times_save_name, times, delimiter =", ", fmt ='% s') 
-				loss_f_list = loss_f_list + net.loss_f_list
-				loss_b_d_list = loss_b_d_list + net.loss_b_d_list
-				np.savetxt(loss_f_save_name, loss_f_list, delimiter =", ", fmt ='% s') 
-				np.savetxt(loss_b_d_save_name, loss_b_d_list, delimiter =", ", fmt ='% s') 
+				# loss_f_list = loss_f_list + net.loss_f_list
+				# loss_b_d_list = loss_b_d_list + net.loss_b_d_list
+				# np.savetxt(loss_f_save_name, loss_f_list, delimiter =", ", fmt ='% s') 
+				# np.savetxt(loss_b_d_save_name, loss_b_d_list, delimiter =", ", fmt ='% s') 
 
 		epoch += 1
 		print("At epoch ",epoch," loss is ",loss_val," loss diff is ",loss_diff," gradient is ",gradient,", mu is ",mu,", tau is ",tau,", time: ",iteration_time,"\n")
@@ -191,10 +187,10 @@ def train_lm(net, samples_list, max_iter, tol, mu, beta, save_toggle, path_weigh
 	np.savetxt(f_save_name, fval, delimiter =", ", fmt ='% s') 
 	np.savetxt(grad_save_name, grad_val, delimiter =", ", fmt ='% s') 
 	np.savetxt(times_save_name, times, delimiter =", ", fmt ='% s') 
-	loss_f_list = loss_f_list + net.loss_f_list
-	loss_b_d_list = loss_b_d_list + net.loss_b_d_list
-	np.savetxt(loss_f_save_name, loss_f_list, delimiter =", ", fmt ='% s') 
-	np.savetxt(loss_b_d_save_name, loss_b_d_list, delimiter =", ", fmt ='% s') 
+	# loss_f_list = loss_f_list + net.loss_f_list
+	# loss_b_d_list = loss_b_d_list + net.loss_b_d_list
+	# np.savetxt(loss_f_save_name, loss_f_list, delimiter =", ", fmt ='% s') 
+	# np.savetxt(loss_b_d_save_name, loss_b_d_list, delimiter =", ", fmt ='% s') 
 
 def update_weights(net, samples_list ,mu, batch_lim):
 	tau = 1

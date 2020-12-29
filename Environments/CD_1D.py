@@ -217,7 +217,8 @@ class CD_1D:
 		t_tf = tf.constant((),shape = (self.N_p_train,0),dtype = tf.float32)
 		x_tf = tf.constant((),shape = (self.N_p_train,0),dtype = tf.float32)
 		N = tf.constant(self.N_p_train, dtype = tf.float32)
-		self.X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'Init', 'weighting':self.type_weighting[3]}
+		weight = tf.constant(self.type_weighting[3], dtype = tf.float32)
+		self.X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'Init', 'weight':weight}
 		samples_list = [self.X0_dict]
 		return samples_list
 
@@ -227,7 +228,8 @@ class CD_1D:
 		t_tf = tf.constant((),shape = (self.N_p_test,0),dtype = tf.float32)
 		x_tf = tf.constant((),shape = (self.N_p_test,0),dtype = tf.float32)
 		N = tf.constant(self.N_p_test, dtype = tf.float32)
-		X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'N':N, 'type':'Init', 'weighting':self.type_weighting[3]}
+		weight = tf.constant(self.type_weighting[3], dtype = tf.float32)
+		X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'N':N, 'type':'Init', 'weight':weight}
 		self.h_init = 1-np.exp(-1/self.mu_mat_test)
 		self.h_init = np.transpose(self.h_init)
 		return X0_dict, self.u_tests
@@ -249,7 +251,8 @@ class CD_1D:
 		t_tf = tf.constant((),shape = (self.N_p_train,0),dtype = tf.float32)
 		x_tf = tf.constant((),shape = (self.N_p_train,0),dtype = tf.float32)
 		N = tf.constant(self.N_p_train, dtype = tf.float32)
-		self.X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'Init', 'weighting':self.type_weighting[3]}
+		weight = tf.constant(self.type_weighting[3], dtype = tf.float32)
+		self.X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'Init', 'weight':weight}
 		samples_list = [self.X0_dict]
 		return samples_list
 	
@@ -259,7 +262,8 @@ class CD_1D:
 		t_tf = tf.constant((),shape = (self.N_p_test,0),dtype = tf.float32)
 		x_tf = tf.constant((),shape = (self.N_p_test,0),dtype = tf.float32)
 		N = tf.constant(self.N_p_test, dtype = tf.float32)
-		X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'N':N, 'type':'Init', 'weighting':self.type_weighting[3]}
+		weight = tf.constant(self.type_weighting[3], dtype = tf.float32)
+		X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'N':N, 'type':'Init', 'weight':weight}
 		return X0_dict, self.u_tests
 
 	def generate_PINN_samples(self):
@@ -320,7 +324,8 @@ class CD_1D:
 		xi_tf = tf.constant(self.Xf[:,[1]],dtype = tf.float32)
 		target_tf = tf.constant(target_f, dtype = tf.float32)
 		N = tf.constant(self.Nf, dtype = tf.float32)
-		self.Xf_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'Res', 'weighting':self.type_weighting[0]}
+		weight = tf.constant(self.type_weighting[0], dtype = tf.float32)
+		self.Xf_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'Res', 'weight':weight}
 		samples_list.append(self.Xf_dict)
 
 		y_tf = tf.constant((),shape = (self.Nb,0),dtype = tf.float32)
@@ -329,7 +334,8 @@ class CD_1D:
 		xi_tf = tf.constant(self.Xb_d[:,[1]],dtype = tf.float32)
 		target_tf = tf.constant(self.ub_d, dtype = tf.float32)
 		N = tf.constant(self.Nb, dtype = tf.float32)
-		self.Xb_d_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'B_D', 'weighting':self.type_weighting[1]}
+		weight = tf.constant(self.type_weighting[1], dtype = tf.float32)
+		self.Xb_d_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'B_D', 'weight':weight}
 		samples_list.append(self.Xb_d_dict)
 
 		if self.N0>0:
@@ -339,7 +345,8 @@ class CD_1D:
 			xi_tf = tf.constant(self.X0[:,[1]],dtype = tf.float32)
 			target_tf = tf.constant(self.u0, dtype = tf.float32)
 			N = tf.constant(self.N0, dtype = tf.float32)
-			self.X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':"Init", 'weighting':self.type_weighting[3]}
+			weight = tf.constant(self.type_weighting[3], dtype = tf.float32)
+			self.X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':"Init", 'weight':weight}
 			samples_list.append(self.X0_dict)
 
 		return samples_list
@@ -352,7 +359,8 @@ class CD_1D:
 		xi_tf = tf.constant(self.N0_tests[:,[1]],dtype = tf.float32)
 		target_tf = tf.constant(self.u0_tests, dtype = tf.float32)
 		N = tf.constant(N, dtype = tf.float32)
-		X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':"Init", 'weighting':self.type_weighting[3]}
+		weight = tf.constant(self.type_weighting[3], dtype = tf.float32)
+		X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':"Init", 'weight':weight}
 		return X0_dict, target_tf
 
 	@tf.function

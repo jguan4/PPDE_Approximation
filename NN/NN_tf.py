@@ -18,7 +18,7 @@ class NN_tf:
 		self.input_size = input_size
 		self.output_size = output_size
 		self.layers = layers
-		self.regular_alphas = regular_alphas
+		self.regular_alphas = tf.constant(regular_alphas[0], dtype = tf.float32)
 		self.lb = tf.constant(self.env.lb, dtype = tf.float32)
 		self.ub = tf.constant(self.env.ub, dtype = tf.float32)
 		self.initialize_NN()
@@ -178,20 +178,12 @@ class NN_tf:
 				loss_0 = tf.math.reduce_sum(err_0**2)/2
 				loss_val = loss_val + loss_0
 
+		if self.regular_alphas != 0:
+			weights = tf.concat(self.weights, axis = -1)
+			biases = tf.concat(self.biases, axis = -1)
+			loss_val = loss_val + self.regular_alphas*(tf.norm(weights)**2+tf.norm(biases)**2)
+
 		return loss_val
-
-	@tf.function
-	def construct_Jacobian_dirichlet(self, x_tf, y_tf, t_tf, xi_tf, target, N, weight):
-		with tf.GradientTape(persistent = True) as tape:
-			err = self.compute_solution(x_tf, y_tf, t_tf, xi_tf, target)*tf.math.sqrt(weight/N)
-			err = tf.reshape(err, [tf.reduce_prod(tf.shape(err)),1])
-		weights_jacobians = tape.jacobian(err, self.weights)
-		biases_jacobians = tape.jacobian(err, self.biases)
-
-		jacobs_tol_W = tf.squeeze(tf.concat(weights_jacobians, axis = -1))
-		jacobs_tol_b = tf.squeeze(tf.concat(biases_jacobians, axis = -1))
-		del tape
-		return jacobs_tol_W, jacobs_tol_b, err
 
 	@tf.function
 	def construct_Jacobian_solution(self, x_tf, y_tf, t_tf, xi_tf, target, N, weight):

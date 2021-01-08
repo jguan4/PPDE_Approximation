@@ -87,6 +87,7 @@ class CD_1D:
 			if N0>0:
 				sampling_0 = LHS(xlimits = self.x_p_domain)
 				X0 = sampling_0(N0)
+				X0[:,1] = np.power(10, X0[:,1])
 				self.X0 = X0
 				self.u0 = self.u_exact(self.X0[:,[0]],self.X0[:,[1]])
 				np.savez("{1}{0}".format(filename,self.path_env), Xf = self.Xf, Xb_d = self.Xb_d, ub_d = self.ub_d, X0 = self.X0, u0 = self.u0)

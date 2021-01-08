@@ -53,6 +53,7 @@ class NN_Driver:
 		if not os.path.exists(PATH_L):
 			os.makedirs(PATH_L)
 		self.path_weight = PATH_W + "Net{6}_Layers{0}_Ntr{1}_h{2}_Reg{3}_Sample{4}_Weight{5}_Opt{7}_L{8}.npz".format(self.layers, Ntr, int(1/h), regular_alphas, self.sampling_method, type_weighting, self.net_toggle,self.opt_toggle, self.L)
+		self.save_name = "Net{6}_Layers{0}_Ntr{1}_h{2}_Reg{3}_Sample{4}_Weight{5}_Opt{7}_L{8}".format(self.layers, Ntr, int(1/h), regular_alphas, self.sampling_method, type_weighting, self.net_toggle,self.opt_toggle, self.L)
 		if method_str == "PODNN":
 			self.path_log = PATH_L + "Net{6}_Layers{0}_Ntr{1}_h{2}_Reg{3}_Sample{4}_Weight{5}_Opt{7}/L{8}/".format(self.layers, Ntr, int(1/h), regular_alphas, self.sampling_method, type_weighting, self.net_toggle,self.opt_toggle,self.L)
 		elif method_str == "PINN":
@@ -128,5 +129,12 @@ class NN_Driver:
 		else:
 			self.net.load_weights_biases(path)
 
-	def plot_test(self, N_test, figure_path = None):
+	def plot_test(self, figure_path = None):
 		self.env.plot_NN(self.net, figure_path)
+
+	def save_test(self, data_path = None):
+		u_test_grid, u_test_p_grid, _, _, _ = self.env.test_NN(net, None)
+		if data_path is not None:
+			if not os.path.exists(data_path):
+			    os.makedirs(data_path)
+			scipy.io.savemat(data_path+"/{0}.mat".format(self.save_name), {'true_solution':u_test_grid, 'approximation': u_test_p_grid, 'xi':self.env.mu_mat_test, 'x':self.env.x})

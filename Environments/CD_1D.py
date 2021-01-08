@@ -310,9 +310,13 @@ class CD_1D:
 			self.ub_d = np.concatenate((ulb,urb),axis = 0)
 
 			if self.N0>0:
-				sampling_0 = LHS(xlimits = np.array([[0.95,1]]))
+				sampling_0 = LHS(xlimits = self.x_p_domain)
 				x = sampling_0(self.N0)
-				self.X0 = np.concatenate((x,1e-4*np.ones((self.N0,1))),axis = 1)
+				x[:,1] = np.power(10, x[:,1])
+				# setting 1
+				# x[:,0] = x[:,1]*x[:,0]+1-x[:,1]
+				# self.X0 = np.concatenate((x,1e-4*np.ones((self.N0,1))),axis = 1)
+				self.X0 = x
 				self.u0 = self.u_exact(self.X0)
 				np.savez(self.path_env+"{0}".format(filename), Xf = self.Xf, Xb_d = self.Xb_d, ub_d = self.ub_d, X0 = self.X0, u0 = self.u0)
 			else:
@@ -339,6 +343,12 @@ class CD_1D:
 		samples_list.append(self.Xb_d_dict)
 
 		if self.N0>0:
+			#check number of samples in (1-xi,1) corner
+			xis = self.X0[:,[1]]
+			xs = self.X0[:,[0]]
+			inds_corner = [i for i in range(len(xs)) if xs[i]>=1-xis[i]]
+			print("Number of samples in the corners is {0} out of {1}.\n".format(len(inds_corner),self.N0))
+
 			y_tf = tf.constant((),shape = (self.N0,0),dtype = tf.float32)
 			t_tf = tf.constant((),shape = (self.N0,0),dtype = tf.float32)
 			x_tf = tf.constant(self.X0[:,[0]],dtype = tf.float32)
@@ -348,7 +358,6 @@ class CD_1D:
 			weight = tf.constant(self.type_weighting[3], dtype = tf.float32)
 			self.X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':"Init", 'weight':weight}
 			samples_list.append(self.X0_dict)
-
 		return samples_list
 
 	def generate_PINN_tests(self):
@@ -449,6 +458,8 @@ class CD_1D:
 				# plt.clf()
 				# plt.close()
 			# else:
+			# plt.ioff()
+			# plt.gcf().show()
 			plt.show()
 
 	def select_region(self, inputs, vec, n, epsilon):

@@ -107,7 +107,7 @@ def compute_JJ(jacobs_tol_W, jacobs_tol_b, err_batch):
 	Je_b = tf.matmul(jacobs_tol_b, err_batch, transpose_a = True)
 	return JJ_W, JJ_b, Je_W, Je_b
 
-def train_lm(net, samples_list, max_iter, tol, mu, beta, save_toggle, path_weight = "./temp.npz", path_log = "./Log/"):
+def train_lm(net, samples_list, max_iter, tol, mu, beta, save_toggle, save_for_plot, path_weight = "./temp.npz", path_log = "./Log/", path_plot = "./temp.npz"):
 
 	epoch = 0
 	gradient = 1
@@ -119,21 +119,23 @@ def train_lm(net, samples_list, max_iter, tol, mu, beta, save_toggle, path_weigh
 	fval = []
 	grad_val = []
 	times = []
-	# loss_f_list = []
-	# loss_b_d_list = []
+	loss_f_list = []
+	loss_b_d_list = []
 
 	f_name = "f.csv"
 	grad_name = "grad.csv"
 	times_name = "times.csv"
-	# loss_f_name = "loss_f.csv"
-	# loss_b_d_name = "loss_b_d.csv"
+	loss_f_name = "loss_f.csv"
+	loss_b_d_name = "loss_b_d.csv"
+	loss_b_n_name = "loss_b_n.csv"
 
 	if save_toggle == 1:
 		f_save_name = modify_filename(path_log,f_name)
 		grad_save_name = modify_filename(path_log,grad_name)
 		times_save_name = modify_filename(path_log,times_name)
-		# loss_f_save_name = modify_filename(path_log,loss_f_name)
-		# loss_b_d_save_name = modify_filename(path_log,loss_b_d_name)
+		loss_f_save_name = modify_filename(path_log,loss_f_name)
+		loss_b_d_save_name = modify_filename(path_log,loss_b_d_name)
+		loss_b_n_save_name = modify_filename(path_log,loss_b_n_name)
 
 	if save_toggle == 2:
 		fval = np.loadtxt(f_save_name, delimiter="\n")
@@ -142,10 +144,12 @@ def train_lm(net, samples_list, max_iter, tol, mu, beta, save_toggle, path_weigh
 		grad_val = grad_val.tolist()
 		times = np.loadtxt(times_save_name, delimiter="\n")
 		times = times.tolist()
-		# loss_f_list = np.loadtxt(loss_f_save_name, delimiter="\n")
-		# loss_f_list = loss_f_list.tolist()
-		# loss_b_d_save_name = np.loadtxt(loss_b_d_save_name, delimiter="\n")
-		# loss_b_d_save_name = loss_b_d_save_name.tolist()
+		loss_f_list = np.loadtxt(loss_f_save_name, delimiter="\n")
+		loss_f_list = loss_f_list.tolist()
+		loss_b_d_save_name = np.loadtxt(loss_b_d_save_name, delimiter="\n")
+		loss_b_d_save_name = loss_b_d_save_name.tolist()
+		loss_b_n_save_name = np.loadtxt(loss_b_n_save_name, delimiter="\n")
+		loss_b_n_save_name = loss_b_n_save_name.tolist()
 	
 	loss_val_tf = net.loss(samples_list)
 	loss_val = loss_val_tf.numpy()
@@ -154,10 +158,18 @@ def train_lm(net, samples_list, max_iter, tol, mu, beta, save_toggle, path_weigh
 
 	print("Starting training...")
 	print("Beginning loss is {0}.\n".format(loss_val))
-	while loss_val>tol and epoch<max_iter and gradient>1e-5:# and loss_diff != 0:
+	while loss_val>tol and epoch<max_iter and gradient>1e-5 and loss_diff != 0:
 		tau = 1
+
+		# BNweight = weight_decay_exp(epoch)
+		# for i in range(len(samples_list)):
+		# 	dict_i = samples_list[i]
+		# 	name_i = dict_i["type"]
+		# 	if name_i == "B_N":
+		# 		dict_i["weight"] = BNweight
+
 		start_time = time.time()
-		temp_loss, gradient, mu = update_weights(net,samples_list,mu,batch_lim)
+		temp_loss, gradient, mu, net = update_weights(net,samples_list,mu,batch_lim)
 
 		iteration_time = time.time()-start_time
 		times.append(iteration_time)
@@ -168,6 +180,11 @@ def train_lm(net, samples_list, max_iter, tol, mu, beta, save_toggle, path_weigh
 		fval.append(loss_val)
 		grad_val.append(gradient)
 
+		if save_for_plot:
+			if epoch%1 == 0:
+				plot_weight_name = path_plot+"/{0}.npz".format(epoch)
+				net.save_weights_biases(plot_weight_name)
+
 		if save_toggle:
 			if epoch%10 ==0:
 				net.save_weights_biases(path_weight)
@@ -176,28 +193,55 @@ def train_lm(net, samples_list, max_iter, tol, mu, beta, save_toggle, path_weigh
 				np.savetxt(times_save_name, times, delimiter =", ", fmt ='% s') 
 				# loss_f_list = loss_f_list + net.loss_f_list
 				# loss_b_d_list = loss_b_d_list + net.loss_b_d_list
-				# np.savetxt(loss_f_save_name, loss_f_list, delimiter =", ", fmt ='% s') 
-				# np.savetxt(loss_b_d_save_name, loss_b_d_list, delimiter =", ", fmt ='% s') 
+				np.savetxt(loss_f_save_name, net.loss_f_list, delimiter =", ", fmt ='% s') 
+				np.savetxt(loss_b_d_save_name, net.loss_b_d_list, delimiter =", ", fmt ='% s') 
+				np.savetxt(loss_b_n_save_name, net.loss_b_n_list, delimiter =", ", fmt ='% s') 
 
 		epoch += 1
 		print("At epoch ",epoch," loss is ",loss_val," loss diff is ",loss_diff," gradient is ",gradient,", mu is ",mu,", tau is ",tau,", time: ",iteration_time,"\n")
 		if mu>1e4:
 			mu = 1e-2
+
 	net.save_weights_biases(path_weight)
+	if save_for_plot:
+		plot_weight_name = path_plot+"/{0}.npz".format(epoch)
+		net.save_weights_biases(plot_weight_name)
 	np.savetxt(f_save_name, fval, delimiter =", ", fmt ='% s') 
 	np.savetxt(grad_save_name, grad_val, delimiter =", ", fmt ='% s') 
 	np.savetxt(times_save_name, times, delimiter =", ", fmt ='% s') 
 	# loss_f_list = loss_f_list + net.loss_f_list
 	# loss_b_d_list = loss_b_d_list + net.loss_b_d_list
-	# np.savetxt(loss_f_save_name, loss_f_list, delimiter =", ", fmt ='% s') 
-	# np.savetxt(loss_b_d_save_name, loss_b_d_list, delimiter =", ", fmt ='% s') 
+	np.savetxt(loss_f_save_name, net.loss_f_list, delimiter =", ", fmt ='% s') 
+	np.savetxt(loss_b_d_save_name, net.loss_b_d_list, delimiter =", ", fmt ='% s') 
+	np.savetxt(loss_b_n_save_name, net.loss_b_n_list, delimiter =", ", fmt ='% s') 
+
+def weight_decay_linear(epoch):
+	epoch_lim = 500
+	start = 1e-4
+	end = 1
+	m = (end-start)/epoch_lim
+	y = epoch*m+start
+	weight = np.amin([y,end])
+	weight= tf.constant(weight, dtype = tf.float32)
+	return weight
+
+def weight_decay_exp(epoch):
+	epoch_lim = 500
+	start = 1e-4
+	end = 1
+	m = np.log(end/start)/500
+	y = start*np.exp(epoch*m)
+	weight = np.amin([y,end])
+	weight= tf.constant(weight, dtype = tf.float32)
+	return weight
+
 
 def update_weights(net, samples_list ,mu, batch_lim):
 	tau = 1
 	m = 1
 	old_weights, old_biases, old_weights_lin, old_biases_lin = net.get_weights_biases()
 
-	_ = net.loss(samples_list, save_toggle=True)
+	loss_val1 = net.loss(samples_list, save_toggle=True)
 	loss_val_tf, grads_W_list, grads_b_list = net.construct_Gradient(samples_list)
 	loss_val = loss_val_tf.numpy()
 	gradient = tf.norm(grads_W_list)+tf.norm(grads_b_list)
@@ -212,6 +256,7 @@ def update_weights(net, samples_list ,mu, batch_lim):
 
 	loss_diff = loss_val - temp_loss
 
+	# input()
 	if loss_diff>=0:
 		loss_val = temp_loss
 		loss_diff1 = loss_diff
@@ -269,8 +314,10 @@ def update_weights(net, samples_list ,mu, batch_lim):
 				best_weights, best_biases, _, _ = net.get_weights_biases()
 				best_loss = temp_loss1
 		net.set_weights_biases(best_weights, best_biases)
+		loss_current = net.loss(samples_list)
+		loss_val = loss_current.numpy()
 		loss_diff = loss_val - best_loss
-		loss_val = best_loss
+		# loss_val = best_loss
 		mu = temp_mu
-	return loss_val, gradient, mu
+	return loss_val, gradient, mu, net
 

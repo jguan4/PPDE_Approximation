@@ -12,15 +12,15 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import csv
 
-class CD_1D:
+class CD_2D_6:
 	def __init__(self, N_p_train, N_p_test, h, type_weighting = [1,1,1,1], inner = False, sampling_method = 0, add_sample = False, path_env = "./Environments/", L = 0):
-		self.name = "CD_1D"
+		self.name = "CD_2D_6"
 		self.sampling_method = sampling_method
-		self.u_dim = 1
+		self.u_dim = 2
 		self.P_dim = 1
-		self.domain = np.array([[0,1]])
+		self.domain = np.array([[-1,1],[-1,1]])
 		self.plimits = np.array([[-4,0]])
-		self.x_p_domain = np.array([[0, 1], [-4, 0]])
+		self.x_p_domain = np.array([[-1, 1], [-1, 1], [-4, 0]])
 		self.h = h
 		self.path_env = path_env
 		self.type_weighting = type_weighting
@@ -43,8 +43,8 @@ class CD_1D:
 		elif self.sampling_method == 1 or self.sampling_method == 2:
 			self.state_space_size = self.u_dim+self.P_dim
 			self.output_space_size  = 1
-			self.lb = np.array([0.0, 1e-4])
-			self.ub = np.array([1.0, 1.0])
+			self.lb = np.array([-1e-4, 0.0, 1e-4])
+			self.ub = np.array([1e-4, 2e4, 1.0])
 			self.Nf = N_p_train[0]
 			self.Nb = N_p_train[1]
 			self.Nn = N_p_train[2]
@@ -79,18 +79,26 @@ class CD_1D:
 			self.generate_RNN_init()
 
 		self.N_p_test = N_p_test
+		self.N = int(2/self.h)+1
 
-		self.N = int(1/h)+1
 		self.nx = self.N-2
-		self.inner = inner
-		self.x = np.linspace(self.domain[0,0],self.domain[0,1],num=self.N)
-		self.x_in = self.x[1:-1]
+		self.ny = self.N-2
 
+		self.x = np.linspace(self.domain[0,0],self.domain[0,1],num=self.N)
+		self.y = np.linspace(self.domain[1,0],self.domain[1,1],num=self.N)
+		self.x_in = self.x[1:-1]
+		self.y_in = self.y[1:-1]
+
+		self.X, self.Y = np.meshgrid(self.x,self.y)
+		self.X_in = self.X[1:-1,1:-1]
+		self.Y_in = self.Y[1:-1,1:-1]
+
+		self.inner = inner
 
 	def generate_para(self):
 		np.random.seed(10)
 		sampling = LHS(xlimits=self.plimits)
-		filename = self.path_env+"CD_1D_{0}.npy".format(self.N_p_train)
+		filename = self.path_env+"CD_2D_{0}.npy".format(self.N_p_train)
 		
 		# check if train parameters exist
 		if os.path.exists(filename):
@@ -103,13 +111,15 @@ class CD_1D:
 	def generate_para_test(self):
 		np.random.seed(10)
 		sampling = LHS(xlimits=self.plimits)
+		# sampling = LHS(xlimits=np.array([[-2,0]]))
+
 		# check if test parameters exist
-		if os.path.exists(self.path_env+"CD_1D_{0}.npy".format(self.N_p_test)):
-			self.mu_mat_test = np.load(self.path_env+"CD_1D_{0}.npy".format(self.N_p_test))
+		if os.path.exists(self.path_env+"CD_2D_{0}.npy".format(self.N_p_test)):
+			self.mu_mat_test = np.load(self.path_env+"CD_2D_{0}.npy".format(self.N_p_test))
 		else:
 			self.mu_mat_test = sampling(self.N_p_test).T
 			self.mu_mat_test[0,:] = np.power(10,self.mu_mat_test[0,:])
-			np.save(self.path_env+"CD_1D_{0}.npy".format(self.N_p_test),self.mu_mat_test)
+			np.save(self.path_env+"CD_2D_{0}.npy".format(self.N_p_test),self.mu_mat_test)
 
 	def u_exact_train(self):
 		if self.sampling_method == 0:
@@ -143,10 +153,12 @@ class CD_1D:
 			return self.generate_RNN_tests()
 
 	def u_exact(self, X):
-		x = X[:,[0]]
-		xi = X[:,[1]]
-		u = 1-np.exp((x-1)/xi)
-		return u
+		xi = X[:,[0]]
+		eta = X[:,[1]]
+		eps = X[:,[2]]
+		v = xi/eps*((1-np.exp(-eta))/(1-np.exp(-2/eps)))
+		# u = 1-np.exp((x-1)/xi)
+		return v
 
 	def generate_A_F(self,p):
 		xi = p[0]
@@ -157,7 +169,6 @@ class CD_1D:
 		return L,F
 
 	def generate_one_sol(self, p, test = False):
-		# X = 
 		L,F = self.generate_A_F(p)
 		u = spsolve(L,F)
 		self.compile_output(u, p, test)
@@ -196,16 +207,20 @@ class CD_1D:
 		U[0] = (1-np.exp(-1/xi))
 		return U
 
-	def create_inner_X(self,p):
-		X_in = self.x_in.reshape((self.N-2,1))
-		P = p*np.ones((self.nx,self.P_dim))
-		X_f = np.concatenate((X_in,P),axis=1)
+	def create_inner_X(self, p):
+		X_in = self.X_in
+		Y_in = self.Y_in
+		X = X_in.reshape(((self.ny)*self.nx,1))
+		Y = Y_in.reshape(((self.ny)*self.nx,1))
+		P = p*np.ones(((self.ny)*self.nx,self.P_dim))
+		X_f = np.concatenate((X,Y,P),axis=1)
 		return X_f
 
 	def create_tol_X(self,p):
-		X = self.x.reshape((self.N,1))
-		P = p*np.ones((self.N,self.P_dim))
-		X_f = np.concatenate((X,P),axis=1)
+		X = self.X.reshape((self.N*self.N,1))
+		Y = self.Y.reshape((self.N*self.N,1))
+		P = p*np.ones((self.N*self.N,self.P_dim))
+		X_f = np.concatenate((X*P,(1-Y)/P,P),axis=1)
 		return X_f
 
 	def generate_RNN_init(self):
@@ -274,7 +289,7 @@ class CD_1D:
 		Ns = [self.Nf, self.Nb, self.Nn, self.N0]
 		samples_list = []
 
-		filename = "CD_1D_{0}{1}.npz".format(Ns,app_str)
+		filename = "CD_2D_6ver_{0}{1}.npz".format(Ns,app_str)
 		if os.path.exists("{1}{0}".format(filename,self.path_env)):
 			npzfile = np.load("{1}{0}".format(filename,self.path_env))
 			if self.Nf>0:
@@ -295,35 +310,33 @@ class CD_1D:
 		else:
 			np.random.seed(10)
 
-			if app_str == "_uniform":
-				xnum = 100
-				epsnum = int(self.Nf/xnum)
-				eps_log = np.linspace(-4,0,epsnum)
-				eps = np.power(10,eps_log)
-				eps_arr = np.tile(eps,xnum)
-				eps_arr = eps_arr.reshape((self.Nf,1))
-				rend = np.ones((epsnum,1))
-				xmat = np.linspace(np.zeros(rend.shape),rend,xnum+2)
-				xmat = xmat[1:-1]
-				x_arr = xmat.reshape((self.Nf,1))
-				self.Xf = np.concatenate((x_arr,eps_arr),axis=1)
-			else:
-				sampling_f = LHS(xlimits = self.x_p_domain)
-				self.Xf = sampling_f(self.Nf)
-				self.Xf[:,1] = np.power(10, self.Xf[:,1])
+			sampling_f = LHS(xlimits = np.array([[-1, 1], [-1, 1], [-4, 0]]))
+			# sampling_f = LHS(xlimits = self.x_p_domain)
+			self.Xf = sampling_f(self.Nf)
+
+			self.Xf[:,2] = np.power(10, self.Xf[:,2])
+			self.Xf[:,0] = self.Xf[:,2]*self.Xf[:,0]
+			self.Xf[:,1] = (1-self.Xf[:,1])/self.Xf[:,2]
 			target_f = np.zeros([self.Nf,1])
 
-			sampling_b = LHS(xlimits = np.array([[-4, 0]]))
-			x_p_b = sampling_b(self.Nb//2)
-			pb = x_p_b
+			sampling_b = LHS(xlimits = np.array([[-1, 1], [-4, 0]]))
+			Nb_side = self.Nb//4
+			x_p_b = sampling_b(Nb_side)
+			pb = x_p_b[:,[1]]
 			pb_10= np.power(10, pb)
-			lb = np.concatenate((np.zeros((self.Nb//2,1)),pb_10),axis = 1)
-			ulb = 1-np.exp(-1/pb_10)
-			rb = np.concatenate((np.ones([self.Nb//2,1]),pb_10),axis = 1)
-			urb = np.zeros((self.Nb//2,1))
+			xib = x_p_b[:,[0]]*pb_10
+			etab = (1-x_p_b[:,[0]])/pb_10
+			lb = np.concatenate((-pb_10,etab,pb_10),axis = 1)
+			ulb = -(1-np.exp(-etab))/(1-np.exp(-2/pb_10))
+			rb = np.concatenate((pb_10,etab,pb_10),axis = 1)
+			urb = (1-np.exp(-etab))/(1-np.exp(-2/pb_10))
+			tb = np.concatenate((xib,np.zeros((Nb_side,1)),pb_10),axis = 1)
+			utb = np.zeros((Nb_side,1))
+			db = np.concatenate((xib,2/pb_10,pb_10),axis = 1)
+			udb = xib/pb_10
 
-			self.Xb_d = np.concatenate((lb,rb),axis = 0)
-			self.ub_d = np.concatenate((ulb,urb),axis = 0)
+			self.Xb_d = np.concatenate((lb,rb,tb,db),axis = 0)
+			self.ub_d = np.concatenate((ulb,urb,utb,udb),axis = 0)
 
 			if self.N0>0:
 				sampling_0 = LHS(xlimits = self.x_p_domain)
@@ -365,29 +378,34 @@ class CD_1D:
 			else:
 				np.savez(self.path_env+"{0}".format(filename), Xf = self.Xf, Xb_d = self.Xb_d, ub_d = self.ub_d)
 		
-		y_tf = tf.constant((),shape = (self.Nf,0),dtype = tf.float32)
-		t_tf = tf.constant((),shape = (self.Nf,0),dtype = tf.float32)
-		x_tf = tf.constant(self.Xf[:,[0]],dtype = tf.float32)
-		xi_tf = tf.constant(self.Xf[:,[1]],dtype = tf.float32)
-		target_tf = tf.constant(target_f, dtype = tf.float32)
-		N = tf.constant(self.Nf, dtype = tf.float32)
-		weight = tf.constant(self.type_weighting[0], dtype = tf.float32)
-		self.Xf_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'Res', 'weight':weight}
-		samples_list.append(self.Xf_dict)
+		print(self.Xf)
+		print(self.Xb_d)
+		input()
+		if self.Nf>0:
+			t_tf = tf.constant((),shape = (self.Nf,0),dtype = tf.float32)
+			x_tf = tf.constant(self.Xf[:,[0]],dtype = tf.float32)
+			y_tf = tf.constant(self.Xf[:,[1]],dtype = tf.float32)
+			xi_tf = tf.constant(self.Xf[:,[2]],dtype = tf.float32)
+			target_tf = tf.constant(target_f, dtype = tf.float32)
+			N = tf.constant(self.Nf, dtype = tf.float32)
+			weight = tf.constant(self.type_weighting[0], dtype = tf.float32)
+			self.Xf_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'Res', 'weight':weight}
+			samples_list.append(self.Xf_dict)
 
-		y_tf = tf.constant((),shape = (self.Nb,0),dtype = tf.float32)
-		t_tf = tf.constant((),shape = (self.Nb,0),dtype = tf.float32)
-		x_tf = tf.constant(self.Xb_d[:,[0]],dtype = tf.float32)
-		xi_tf = tf.constant(self.Xb_d[:,[1]],dtype = tf.float32)
-		target_tf = tf.constant(self.ub_d, dtype = tf.float32)
-		N = tf.constant(self.Nb, dtype = tf.float32)
-		weight = tf.constant(self.type_weighting[1], dtype = tf.float32)
-		self.Xb_d_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'B_D', 'weight':weight}
-		samples_list.append(self.Xb_d_dict)
+		if self.Nb>0:
+			t_tf = tf.constant((),shape = (self.Nb,0),dtype = tf.float32)
+			x_tf = tf.constant(self.Xb_d[:,[0]],dtype = tf.float32)
+			y_tf = tf.constant(self.Xb_d[:,[1]],dtype = tf.float32)
+			xi_tf = tf.constant(self.Xb_d[:,[2]],dtype = tf.float32)
+			target_tf = tf.constant(self.ub_d, dtype = tf.float32)
+			N = tf.constant(self.Nb, dtype = tf.float32)
+			weight = tf.constant(self.type_weighting[1], dtype = tf.float32)
+			self.Xb_d_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'B_D', 'weight':weight}
+			samples_list.append(self.Xb_d_dict)
 
 		if self.N0>0:
 			#check number of samples in (1-xi,1) corner
-			xis = self.X0[:,[1]]
+			xis = self.X0[:,[2]]
 			xs = self.X0[:,[0]]
 			inds_corner = [i for i in range(len(xs)) if xs[i]>=1-xis[i]]
 			print("Number of samples in the corners is {0} out of {1}.\n".format(len(inds_corner),self.N0))
@@ -397,10 +415,10 @@ class CD_1D:
 			# ax.plot(xs,xis, 'o')
 			# plt.show()
 
-			y_tf = tf.constant((),shape = (self.N0,0),dtype = tf.float32)
+			y_tf = tf.constant(self.X0[:,[1]],dtype = tf.float32)
 			t_tf = tf.constant((),shape = (self.N0,0),dtype = tf.float32)
 			x_tf = tf.constant(self.X0[:,[0]],dtype = tf.float32)
-			xi_tf = tf.constant(self.X0[:,[1]],dtype = tf.float32)
+			xi_tf = tf.constant(self.X0[:,[2]],dtype = tf.float32)
 			target_tf = tf.constant(self.u0, dtype = tf.float32)
 			N = tf.constant(self.N0, dtype = tf.float32)
 			weight = tf.constant(self.type_weighting[3], dtype = tf.float32)
@@ -410,10 +428,10 @@ class CD_1D:
 
 	def generate_PINN_tests(self):
 		N = self.N0_tests.shape[0]
-		y_tf = tf.constant((),shape = (N,0),dtype = tf.float32)
 		t_tf = tf.constant((),shape = (N,0),dtype = tf.float32)
 		x_tf = tf.constant(self.N0_tests[:,[0]],dtype = tf.float32)
-		xi_tf = tf.constant(self.N0_tests[:,[1]],dtype = tf.float32)
+		y_tf = tf.constant(self.N0_tests[:,[1]],dtype = tf.float32)
+		xi_tf = tf.constant(self.N0_tests[:,[2]],dtype = tf.float32)
 		target_tf = tf.constant(self.u0_tests, dtype = tf.float32)
 		N = tf.constant(N, dtype = tf.float32)
 		weight = tf.constant(self.type_weighting[3], dtype = tf.float32)
@@ -422,14 +440,16 @@ class CD_1D:
 
 	@tf.function
 	def f_res(self, x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy):
-		f_u = -u_xx*xi_tf+u_x
+		# f_u = -xi_tf**3*u_xx-(u_yy+u_y)/xi_tf
+		f_u = -xi_tf**4*u_xx-(u_yy+u_y)
+		# f_u = (-u_xx*xi_tf+u_x-1)/xi_tf
 		return f_u
 
 	@tf.function
-	def neumann_bc(self, u_x, u_y):
+	def neumann_bc(self, x_tf, y_tf, t_tf, xi_tf, u_x, u_y):
 		return
 
-	def test_NN(self, net, record_path = None, save_name = None):
+	def test_NN(self, net, record_path = None,save_name = None):
 		if record_path is not None:
 			folderpath = record_path
 			record_path = record_path + "rel_errs2.csv"
@@ -437,7 +457,7 @@ class CD_1D:
 				pass
 			else:
 				with open(record_path, mode='w') as record:
-					fields=['Problem','Net_struct','Net_setup','Sample','L','relative_err','data_name']
+					fields=['Problem','Net_struct','Net_setup','Sample','L','relative_err','save_name']
 					record_writer = csv.writer(record, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
 					record_writer.writerow(fields)
 		X0_dict, u_test = self.u_exact_test()
@@ -445,7 +465,7 @@ class CD_1D:
 		y_tf = X0_dict["y_tf"]
 		t_tf = X0_dict["t_tf"]
 		xi_tf = X0_dict["xi_tf"]
-		target_f = tf.zeros([self.N*self.N_p_test,1])
+		target_f = tf.zeros([self.N*self.N*self.N_p_test,1])
 		if self.sampling_method == 3:
 			net.h_init = tf.constant(self.h_init,dtype = tf.float32)
 		u_test_p = net.forward(x_tf, y_tf, t_tf, xi_tf)
@@ -459,9 +479,9 @@ class CD_1D:
 
 		elif self.sampling_method == 1 or self.sampling_method == 2:
 			N_record = [self.Nf, self.Nb, self.Nn, self.N0]
-			u_test_grid = tf.reshape(u_test,(self.N_p_test,self.N))
-			u_test_p_grid = tf.reshape(u_test_p,(self.N_p_test,self.N))
-			f_res_grid = tf.reshape(f_res, (self.N_p_test,self.N))
+			u_test_grid = tf.reshape(u_test,(self.N_p_test,self.N,self.N))
+			u_test_p_grid = tf.reshape(u_test_p,(self.N_p_test,self.N,self.N))
+			f_res_grid = tf.reshape(f_res, (self.N_p_test,self.N,self.N))
 
 		if self.sampling_method == 3:
 			u_test_p = u_test_p.numpy()
@@ -472,7 +492,7 @@ class CD_1D:
 		err_grid = u_test_grid-u_test_p_grid
 		err_test = tf.math.reduce_mean(tf.square(err_grid))
 
-		relative_err_vec = tf.norm(err_grid,axis=1)/tf.norm(u_test_grid,axis=1)
+		relative_err_vec = tf.norm(err_grid,axis=[1,2])/tf.norm(u_test_grid,axis=[1,2])
 		rel_err_test = tf.reduce_mean(relative_err_vec)
 		if record_path is not None:
 			# y_tf = tf.constant((),shape = (len(self.x),0),dtype = tf.float32)
@@ -504,12 +524,29 @@ class CD_1D:
 			# 	    os.makedirs(folder_path)
 			# 	scipy.io.savemat(folder_path+"/data4.mat", {'true_solution':u_test_i, 'approximation': u_test_p_i, 'xi':xi, 'x':self.x})
 
-			fig, ax = plt.subplots()
-			ax.plot(self.x, u_test_p_i, color ="red")
-			ax.plot(self.x, u_test_i)
-			ax.set_xlabel(r'$x$')
-			ax.set_ylabel(r'$u$')
-			fig.suptitle(r"$\xi$ = {0}".format(xi))
+			fig = plt.figure(1)
+			ax = fig.gca(projection='3d')
+			ax.plot_wireframe(self.X, self.Y, u_test_p_i, color ="red")
+			ax.set_xlabel('x')
+			ax.set_ylabel('y')
+			ax.set_zlabel('u')
+			ax.set_title(r"NN, $\epsilon$ = {0}".format(xi))
+			fig1 = plt.figure(2)
+			ax1 = fig1.gca(projection='3d')
+			ax1.plot_wireframe(self.X, self.Y, u_test_i)
+			ax1.set_xlabel('x')
+			ax1.set_ylabel('y')
+			ax1.set_zlabel('u')
+			ax1.set_title(r"Exact, $\epsilon$ = {0}".format(xi))
+			diff = u_test_i-u_test_p_i
+			fig2 = plt.figure(3)
+			ax2 = fig2.gca(projection='3d')
+			ax2.plot_wireframe(self.X, self.Y, diff)
+			ax2.set_xlabel('x')
+			ax2.set_ylabel('y')
+			ax2.set_zlabel('u')
+			ax2.set_title(r"Difference, $\epsilon$ = {0}".format(xi))
+			
 			# if figure_save_path is not None:
 				# plt.savefig("{1}/u_xi_{0}.png".format(xi,folder_path))
 				# plt.cla()

@@ -76,10 +76,11 @@ class Burgers_Equation:
 		self.nx = self.N-2
 		self.x_in = self.X[1:-1]
 
-	def generate_para(self):
-		np.random.seed(10)
+	def generate_para(self, app_str=""):
+		# np.random.seed(10)
+
 		sampling = LHS(xlimits=self.plimits)
-		filename = self.path_env+"{1}_{0}.npy".format(self.N_p_train,self.name)
+		filename = self.path_env+"{1}_{0}{2}.npy".format(self.N_p_train,self.name,app_str)
 		
 		# check if train parameters exist
 		if os.path.exists(filename):
@@ -212,14 +213,15 @@ class Burgers_Equation:
 		f = self.minmod(0.5*(x+y),2*self.minmod(x,y))
 		return f
 
-	def generate_POD_samples(self):
+	def generate_POD_samples(self, app_str):
+		self.generate_para(app_str)
 		p_train, u_train = self.u_exact_train()
-		if os.path.exists(self.path_env+"{2}_{1}_V_{0}.npy".format(self.L, self.N_p_train, self.name)):
-			self.V = np.load(self.path_env+"{2}_{1}_V_{0}.npy".format(self.L, self.N_p_train, self.name))
+		if os.path.exists(self.path_env+"{2}_{1}{3}_V_{0}.npy".format(self.L, self.N_p_train, self.name,app_str)):
+			self.V = np.load(self.path_env+"{2}_{1}{3}_V_{0}.npy".format(self.L, self.N_p_train, self.name,app_str))
 		else:
 			u,s,v = np.linalg.svd(u_train) 
 			self.V = u[:,0:self.L]
-			np.save(self.path_env+"{2}_{1}_V_{0}.npy".format(self.L, self.N_p_train, self.name),self.V)
+			np.save(self.path_env+"{2}_{1}{3}_V_{0}.npy".format(self.L, self.N_p_train, self.name,app_str),self.V)
 		p_batch = p_train
 		u_batch = u_train
 		u_batch = self.V.T@u_batch
@@ -351,7 +353,7 @@ class Burgers_Equation:
 		u_test_p = net.forward(x_tf, y_tf, t_tf, xi_tf)
 		if self.sampling_method == 0:
 			u_test_p = u_test_p.numpy()
-			self.V = np.load(self.path_env+"{2}_{1}_V_{0}.npy".format(self.L, self.N_p_train, self.name))
+			self.V = np.load(self.path_env+"{2}_{1}{3}_V_{0}.npy".format(self.L, self.N_p_train, self.name,""))
 			u_test_p = u_test_p@self.V.T
 			u_test_p_grid = tf.constant(u_test_p, dtype = tf.float32)
 			u_test_p_grid = tf.reshape(u_test_p_grid,(self.N_p_test,self.Nt,self.N))

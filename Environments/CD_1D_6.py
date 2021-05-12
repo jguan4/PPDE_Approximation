@@ -12,9 +12,9 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import csv
 
-class CD_1D:
+class CD_1D_6:
 	def __init__(self, N_p_train, N_p_test, h, type_weighting = [1,1,1,1], inner = False, sampling_method = 0, add_sample = False, path_env = "./Environments/", L = 0):
-		self.name = "CD_1D"
+		self.name = "CD_1D_6"
 		self.sampling_method = sampling_method
 		self.u_dim = 1
 		self.P_dim = 1
@@ -145,7 +145,8 @@ class CD_1D:
 	def u_exact(self, X):
 		x = X[:,[0]]
 		xi = X[:,[1]]
-		u = 1-np.exp((x-1)/xi)
+		u = x-xi*(np.exp(-(1-x)/xi)-np.exp(-1/xi))
+		# u = 1-np.exp((x-1)/xi)
 		return u
 
 	def generate_A_F(self,p):
@@ -157,7 +158,6 @@ class CD_1D:
 		return L,F
 
 	def generate_one_sol(self, p, test = False):
-		# X = 
 		L,F = self.generate_A_F(p)
 		u = spsolve(L,F)
 		self.compile_output(u, p, test)
@@ -274,7 +274,7 @@ class CD_1D:
 		Ns = [self.Nf, self.Nb, self.Nn, self.N0]
 		samples_list = []
 
-		filename = "CD_1D_{0}{1}.npz".format(Ns,app_str)
+		filename = "CD_1D_6ver_{0}{1}.npz".format(Ns,app_str)
 		if os.path.exists("{1}{0}".format(filename,self.path_env)):
 			npzfile = np.load("{1}{0}".format(filename,self.path_env))
 			if self.Nf>0:
@@ -285,6 +285,9 @@ class CD_1D:
 			if self.Nb>0:
 				self.Xb_d = npzfile['Xb_d']
 				self.ub_d = npzfile['ub_d']
+			if self.Nn>0:
+				self.Xb_n = npzfile['Xb_n']
+				self.ub_n = npzfile['ub_n']
 
 			if self.N0>0:
 				self.X0 = npzfile['X0']
@@ -302,7 +305,7 @@ class CD_1D:
 				eps = np.power(10,eps_log)
 				eps_arr = np.tile(eps,xnum)
 				eps_arr = eps_arr.reshape((self.Nf,1))
-				rend = np.ones((epsnum,1))
+				rend = np.ones((self.Nf,1))
 				xmat = np.linspace(np.zeros(rend.shape),rend,xnum+2)
 				xmat = xmat[1:-1]
 				x_arr = xmat.reshape((self.Nf,1))
@@ -314,16 +317,24 @@ class CD_1D:
 			target_f = np.zeros([self.Nf,1])
 
 			sampling_b = LHS(xlimits = np.array([[-4, 0]]))
-			x_p_b = sampling_b(self.Nb//2)
+			x_p_b = sampling_b(self.Nb)
 			pb = x_p_b
 			pb_10= np.power(10, pb)
-			lb = np.concatenate((np.zeros((self.Nb//2,1)),pb_10),axis = 1)
-			ulb = 1-np.exp(-1/pb_10)
-			rb = np.concatenate((np.ones([self.Nb//2,1]),pb_10),axis = 1)
-			urb = np.zeros((self.Nb//2,1))
+			lb = np.concatenate((np.zeros((self.Nb,1)),pb_10),axis = 1)
+			ulb = np.zeros((self.Nb,1))
 
-			self.Xb_d = np.concatenate((lb,rb),axis = 0)
-			self.ub_d = np.concatenate((ulb,urb),axis = 0)
+			self.Xb_d = lb
+			self.ub_d = ulb
+
+			sampling_n = LHS(xlimits = np.array([[-4, 0]]))
+			x_p_n = sampling_n(self.Nn)
+			pn = x_p_n
+			pn_10= np.power(10, pn)
+			rb = np.concatenate((np.ones((self.Nn,1)),pb_10),axis = 1)
+			urb = np.zeros((self.Nn,1))
+
+			self.Xb_n = rb
+			self.ub_n = urb
 
 			if self.N0>0:
 				sampling_0 = LHS(xlimits = self.x_p_domain)
@@ -361,29 +372,41 @@ class CD_1D:
 				# self.X0 = np.concatenate((x,1e-4*np.ones((self.N0,1))),axis = 1)
 				self.X0 = x
 				self.u0 = self.u_exact(self.X0)
-				np.savez(self.path_env+"{0}".format(filename), Xf = self.Xf, Xb_d = self.Xb_d, ub_d = self.ub_d, X0 = self.X0, u0 = self.u0)
+				np.savez(self.path_env+"{0}".format(filename), Xf = self.Xf, Xb_d = self.Xb_d, ub_d = self.ub_d, Xb_n = self.Xb_n, ub_n = self.ub_n, X0 = self.X0, u0 = self.u0)
 			else:
-				np.savez(self.path_env+"{0}".format(filename), Xf = self.Xf, Xb_d = self.Xb_d, ub_d = self.ub_d)
+				np.savez(self.path_env+"{0}".format(filename), Xf = self.Xf, Xb_d = self.Xb_d, ub_d = self.ub_d, Xb_n = self.Xb_n, ub_n = self.ub_n)
 		
-		y_tf = tf.constant((),shape = (self.Nf,0),dtype = tf.float32)
-		t_tf = tf.constant((),shape = (self.Nf,0),dtype = tf.float32)
-		x_tf = tf.constant(self.Xf[:,[0]],dtype = tf.float32)
-		xi_tf = tf.constant(self.Xf[:,[1]],dtype = tf.float32)
-		target_tf = tf.constant(target_f, dtype = tf.float32)
-		N = tf.constant(self.Nf, dtype = tf.float32)
-		weight = tf.constant(self.type_weighting[0], dtype = tf.float32)
-		self.Xf_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'Res', 'weight':weight}
-		samples_list.append(self.Xf_dict)
+		if self.Nf>0:
+			y_tf = tf.constant((),shape = (self.Nf,0),dtype = tf.float32)
+			t_tf = tf.constant((),shape = (self.Nf,0),dtype = tf.float32)
+			x_tf = tf.constant(self.Xf[:,[0]],dtype = tf.float32)
+			xi_tf = tf.constant(self.Xf[:,[1]],dtype = tf.float32)
+			target_tf = tf.constant(target_f, dtype = tf.float32)
+			N = tf.constant(self.Nf, dtype = tf.float32)
+			weight = tf.constant(self.type_weighting[0], dtype = tf.float32)
+			self.Xf_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'Res', 'weight':weight}
+			samples_list.append(self.Xf_dict)
 
-		y_tf = tf.constant((),shape = (self.Nb,0),dtype = tf.float32)
-		t_tf = tf.constant((),shape = (self.Nb,0),dtype = tf.float32)
-		x_tf = tf.constant(self.Xb_d[:,[0]],dtype = tf.float32)
-		xi_tf = tf.constant(self.Xb_d[:,[1]],dtype = tf.float32)
-		target_tf = tf.constant(self.ub_d, dtype = tf.float32)
-		N = tf.constant(self.Nb, dtype = tf.float32)
-		weight = tf.constant(self.type_weighting[1], dtype = tf.float32)
-		self.Xb_d_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'B_D', 'weight':weight}
-		samples_list.append(self.Xb_d_dict)
+		if self.Nb>0:
+			y_tf = tf.constant((),shape = (self.Nb,0),dtype = tf.float32)
+			t_tf = tf.constant((),shape = (self.Nb,0),dtype = tf.float32)
+			x_tf = tf.constant(self.Xb_d[:,[0]],dtype = tf.float32)
+			xi_tf = tf.constant(self.Xb_d[:,[1]],dtype = tf.float32)
+			target_tf = tf.constant(self.ub_d, dtype = tf.float32)
+			N = tf.constant(self.Nb, dtype = tf.float32)
+			weight = tf.constant(self.type_weighting[1], dtype = tf.float32)
+			self.Xb_d_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'B_D', 'weight':weight}
+			samples_list.append(self.Xb_d_dict)
+		if self.Nn>0:
+			y_tf = tf.constant((),shape = (self.Nn,0),dtype = tf.float32)
+			t_tf = tf.constant((),shape = (self.Nn,0),dtype = tf.float32)
+			x_tf = tf.constant(self.Xb_n[:,[0]],dtype = tf.float32)
+			xi_tf = tf.constant(self.Xb_n[:,[1]],dtype = tf.float32)
+			target_tf = tf.constant(self.ub_n, dtype = tf.float32)
+			N = tf.constant(self.Nb, dtype = tf.float32)
+			weight = tf.constant(self.type_weighting[1], dtype = tf.float32)
+			self.Xb_n_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'B_N', 'weight':weight}
+			samples_list.append(self.Xb_n_dict)
 
 		if self.N0>0:
 			#check number of samples in (1-xi,1) corner
@@ -422,14 +445,17 @@ class CD_1D:
 
 	@tf.function
 	def f_res(self, x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy):
-		f_u = -u_xx*xi_tf+u_x
+		f_u = -u_xx*xi_tf+u_x-1
+		# f_u = (-u_xx*xi_tf+u_x-1)/xi_tf
 		return f_u
 
 	@tf.function
-	def neumann_bc(self, u_x, u_y):
-		return
+	def neumann_bc(self, x_tf, y_tf, t_tf, xi_tf, u_x, u_y):
+		return u_x
+		# return u_x/tf.math.sqrt(xi_tf)
 
-	def test_NN(self, net, record_path = None, save_name = None):
+
+	def test_NN(self, net, record_path = None,save_name = None):
 		if record_path is not None:
 			folderpath = record_path
 			record_path = record_path + "rel_errs2.csv"
@@ -437,7 +463,7 @@ class CD_1D:
 				pass
 			else:
 				with open(record_path, mode='w') as record:
-					fields=['Problem','Net_struct','Net_setup','Sample','L','relative_err','data_name']
+					fields=['Problem','Net_struct','Net_setup','Sample','L','relative_err','save_name']
 					record_writer = csv.writer(record, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
 					record_writer.writerow(fields)
 		X0_dict, u_test = self.u_exact_test()
@@ -505,7 +531,7 @@ class CD_1D:
 			# 	scipy.io.savemat(folder_path+"/data4.mat", {'true_solution':u_test_i, 'approximation': u_test_p_i, 'xi':xi, 'x':self.x})
 
 			fig, ax = plt.subplots()
-			ax.plot(self.x, u_test_p_i, color ="red")
+			ax.plot(self.x, u_test_p_i, 'o', color ="red")
 			ax.plot(self.x, u_test_i)
 			ax.set_xlabel(r'$x$')
 			ax.set_ylabel(r'$u$')

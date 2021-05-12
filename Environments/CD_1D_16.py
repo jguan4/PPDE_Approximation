@@ -12,9 +12,9 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import csv
 
-class CD_1D:
+class CD_1D_16:
 	def __init__(self, N_p_train, N_p_test, h, type_weighting = [1,1,1,1], inner = False, sampling_method = 0, add_sample = False, path_env = "./Environments/", L = 0):
-		self.name = "CD_1D"
+		self.name = "CD_1D_16"
 		self.sampling_method = sampling_method
 		self.u_dim = 1
 		self.P_dim = 1
@@ -44,7 +44,7 @@ class CD_1D:
 			self.state_space_size = self.u_dim+self.P_dim
 			self.output_space_size  = 1
 			self.lb = np.array([0.0, 1e-4])
-			self.ub = np.array([1.0, 1.0])
+			self.ub = np.array([1e4, 1.0])
 			self.Nf = N_p_train[0]
 			self.Nb = N_p_train[1]
 			self.Nn = N_p_train[2]
@@ -145,7 +145,7 @@ class CD_1D:
 	def u_exact(self, X):
 		x = X[:,[0]]
 		xi = X[:,[1]]
-		u = 1-np.exp((x-1)/xi)
+		u = 1-np.exp(-x)
 		return u
 
 	def generate_A_F(self,p):
@@ -157,7 +157,6 @@ class CD_1D:
 		return L,F
 
 	def generate_one_sol(self, p, test = False):
-		# X = 
 		L,F = self.generate_A_F(p)
 		u = spsolve(L,F)
 		self.compile_output(u, p, test)
@@ -205,7 +204,7 @@ class CD_1D:
 	def create_tol_X(self,p):
 		X = self.x.reshape((self.N,1))
 		P = p*np.ones((self.N,self.P_dim))
-		X_f = np.concatenate((X,P),axis=1)
+		X_f = np.concatenate(((1-X)/P,P),axis=1)
 		return X_f
 
 	def generate_RNN_init(self):
@@ -294,7 +293,6 @@ class CD_1D:
 				self.u0_tf = None
 		else:
 			np.random.seed(10)
-
 			if app_str == "_uniform":
 				xnum = 100
 				epsnum = int(self.Nf/xnum)
@@ -302,7 +300,7 @@ class CD_1D:
 				eps = np.power(10,eps_log)
 				eps_arr = np.tile(eps,xnum)
 				eps_arr = eps_arr.reshape((self.Nf,1))
-				rend = np.ones((epsnum,1))
+				rend = 1/eps
 				xmat = np.linspace(np.zeros(rend.shape),rend,xnum+2)
 				xmat = xmat[1:-1]
 				x_arr = xmat.reshape((self.Nf,1))
@@ -311,15 +309,16 @@ class CD_1D:
 				sampling_f = LHS(xlimits = self.x_p_domain)
 				self.Xf = sampling_f(self.Nf)
 				self.Xf[:,1] = np.power(10, self.Xf[:,1])
+				self.Xf[:,0] = (1-self.Xf[:,0])/self.Xf[:,1]
 			target_f = np.zeros([self.Nf,1])
 
 			sampling_b = LHS(xlimits = np.array([[-4, 0]]))
 			x_p_b = sampling_b(self.Nb//2)
 			pb = x_p_b
 			pb_10= np.power(10, pb)
-			lb = np.concatenate((np.zeros((self.Nb//2,1)),pb_10),axis = 1)
+			lb = np.concatenate((1/pb_10,pb_10),axis = 1)
 			ulb = 1-np.exp(-1/pb_10)
-			rb = np.concatenate((np.ones([self.Nb//2,1]),pb_10),axis = 1)
+			rb = np.concatenate((np.zeros([self.Nb//2,1]),pb_10),axis = 1)
 			urb = np.zeros((self.Nb//2,1))
 
 			self.Xb_d = np.concatenate((lb,rb),axis = 0)
@@ -422,7 +421,7 @@ class CD_1D:
 
 	@tf.function
 	def f_res(self, x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy):
-		f_u = -u_xx*xi_tf+u_x
+		f_u = -(u_xx+u_x)/xi_tf
 		return f_u
 
 	@tf.function
@@ -505,7 +504,7 @@ class CD_1D:
 			# 	scipy.io.savemat(folder_path+"/data4.mat", {'true_solution':u_test_i, 'approximation': u_test_p_i, 'xi':xi, 'x':self.x})
 
 			fig, ax = plt.subplots()
-			ax.plot(self.x, u_test_p_i, color ="red")
+			ax.plot(self.x, u_test_p_i, 'o', color ="red")
 			ax.plot(self.x, u_test_i)
 			ax.set_xlabel(r'$x$')
 			ax.set_ylabel(r'$u$')

@@ -22,6 +22,10 @@ class NN_tf:
 		self.lb = tf.constant(self.env.lb, dtype = tf.float32)
 		self.ub = tf.constant(self.env.ub, dtype = tf.float32)
 		self.initialize_NN()
+		self.loss_f_list = []
+		self.loss_b_d_list = []
+		self.loss_b_n_list = []
+		self.loss_init_list = []
 		
 	def initialize_NN(self):
 		# initializing lists to store weights and dimension of weights
@@ -85,11 +89,20 @@ class NN_tf:
 	@tf.function
 	def forward(self, x_tf, y_tf, t_tf, xi_tf):
 		num_layers = len(self.weights) 
+		# x_tf = x_tf+0.5/xi_tf
 		X = tf.concat((x_tf, y_tf, t_tf, xi_tf), axis = -1)
+
+		# H = (X - self.lb)/(self.ub - self.lb)
+		# H = (X - self.lb)/(self.ub - self.lb)+0.5 #skewcluster
+		# H = (X - self.lb)/(self.ub - self.lb)-0.5 #skewcluster
+		# H = (X - self.lb)/(self.ub - self.lb)-tf.constant(np.array([0.5,0]), dtype = tf.float32)
 		H = (X - self.lb)/(self.ub - self.lb)
+		# H = X
+		# H = 0.5*H+0.5
 		for l in range(num_layers-1):
 			W = tf.reshape(self.weights[l], self.weights_dims[l])
 			b = self.biases[l]
+			# H = tf.keras.activations.tanh(tf.matmul(H, W) + b -0.5) #skewtanh	
 			H = tf.keras.activations.tanh(tf.matmul(H, W) + b)	
 		W = tf.reshape(self.weights[-1], self.weights_dims[-1])
 		b = self.biases[-1]
@@ -124,7 +137,7 @@ class NN_tf:
 	@tf.function 
 	def compute_neumann(self, x_tf, y_tf, t_tf, xi_tf, target):
 		u, u_x, u_y, u_t, u_xx, u_yy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
-		ub_n_p = self.env.neumann_bc(u_x, u_y)
+		ub_n_p = self.env.neumann_bc(x_tf, y_tf, t_tf, xi_tf, u_x, u_y)
 		err = ub_n_p - target
 		return err
 
@@ -154,8 +167,8 @@ class NN_tf:
 				loss_f = tf.math.reduce_sum(f_u**2)/2
 				loss_val = loss_val + loss_f
 				if save_toggle:
-					pass
-					# self.loss_f_list.append(loss_f.numpy())
+					# pass
+					self.loss_f_list.append(loss_f.numpy())
 
 			elif name_i == "B_D":
 				err_do = self.compute_solution(x_tf, y_tf, t_tf, xi_tf, target)
@@ -163,20 +176,25 @@ class NN_tf:
 				loss_d = tf.math.reduce_sum(err_d**2)/2
 				loss_val = loss_val + loss_d
 				if save_toggle:
-					pass
-					# self.loss_b_d_list.append(loss_d.numpy())
+					# pass
+					self.loss_b_d_list.append(loss_d.numpy())
 					
 			elif name_i == "B_N":
 				err_n = self.compute_neumann(x_tf, y_tf, t_tf, xi_tf,target)
 				err_n = (err_n)*np.sqrt(weight/N)
 				loss_n = tf.math.reduce_sum(err_n**2)/2
 				loss_val = loss_val + loss_n
+				if save_toggle:
+					# pass
+					self.loss_b_n_list.append(loss_n.numpy())
 
 			elif name_i == "Init":
 				err_0 = self.compute_solution(x_tf, y_tf, t_tf, xi_tf, target)
 				err_0 = (err_0)*np.sqrt(weight/N)
 				loss_0 = tf.math.reduce_sum(err_0**2)/2
 				loss_val = loss_val + loss_0
+				if save_toggle:
+					self.loss_init_list.append(loss_0.numpy())
 
 		if self.regular_alphas != 0:
 			weights = tf.concat(self.weights, axis = -1)
@@ -310,8 +328,10 @@ class NN_tf:
 
 
 	def set_weights_loss(self, samples_list, new_weights, new_biases):
+		new_weights = tf.constant(new_weights,dtype = tf.float32)
+		new_biases = tf.constant(new_biases,dtype = tf.float32)
 		self.set_weights_biases(tf.squeeze(new_weights),tf.squeeze(new_biases),lin=True)
-		loss_val_tf, _, _, _ = self.loss(samples_list)
+		loss_val_tf = self.loss(samples_list)
 		return loss_val_tf.numpy()
 
 	def line_search(self, f, x, y, delta_x, delta_y ,tau, alpha = 0.01):
@@ -353,8 +373,6 @@ class NN_tf:
 				sample_dict = {'x_tf':x_batch, 'y_tf':y_batch, 't_tf':t_batch, 'xi_tf':xi_batch, 'target':target, 'N':N, 'type':type_str}
 				sample_batch_list.append(sample_dict)
 
-				samples_i_dict = {"type":Ntr_name_i, "output":us_batch, "input":Xs_batch_list, "N":N}
-				sample_batch_list.append(samples_i_dict)
 			else:
 				sample_batch_list.append(sample_i)
 		return sample_batch_list

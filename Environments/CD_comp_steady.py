@@ -303,14 +303,15 @@ class CD_comp_steady:
 		X_f = np.concatenate((X,Y,P),axis=1)
 		return X_f
 
-	def generate_POD_samples(self):
+	def generate_POD_samples(self, app_str):
+		self.generate_para(app_str)
 		p_train, u_train = self.u_exact_train()
-		if os.path.exists(self.path_env+"{2}_{1}_V_{0}.npy".format(self.L, self.N_p_train, self.name)):
-			self.V = np.load(self.path_env+"{2}_{1}_V_{0}.npy".format(self.L, self.N_p_train, self.name))
+		if os.path.exists(self.path_env+"{2}_{1}{3}_V_{0}.npy".format(self.L, self.N_p_train, self.name,app_str)):
+			self.V = np.load(self.path_env+"{2}_{1}{3}_V_{0}.npy".format(self.L, self.N_p_train, self.name,app_str))
 		else:
 			u,s,v = np.linalg.svd(u_train) 
 			self.V = u[:,0:self.L]
-			np.save(self.path_env+"{2}_{1}_V_{0}.npy".format(self.L, self.N_p_train, self.name),self.V)
+			np.save(self.path_env+"{2}_{1}{3}_V_{0}.npy".format(self.L, self.N_p_train, self.name,app_str),self.V)
 		p_batch = p_train
 		u_batch = u_train
 		u_batch = self.V.T@u_batch

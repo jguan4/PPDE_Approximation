@@ -2,5 +2,8 @@ Log/*
 !Log/Writeup
 __pycache__/*
 Optimizers/train_Newton.py
+temp/*
+Plot/*
 *.pyc
 *.pyo
+*.npy

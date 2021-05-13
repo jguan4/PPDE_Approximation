@@ -69,7 +69,7 @@ If one wishes to load trained weights to test and plot the approximations, set `
 In the `Environments` folder, we provide many testing parameter-dependent PDE problems:
 - Unsteady Burger's equation
   - `Burgers_Equation.py`: environment toggle name `Burger`. The formulation for this problem is shown below:
-  ![Unsteady Burger's Equation](./images_for_readme/burgers.png?raw=true "Title")
+  ![Unsteady Burger's Equation](https://latex.codecogs.com/gif.latex?%5Cbegin%7Balign*%7D%20%26u_t&plus;uu_x%20%3D%20%5Cxi%20u_%7Bxx%7D%2C%20%5Cquad%20%5Ctext%7Bfor%20%24%28x%2Ct%29%5Cin%20%5B-1%2C1%5D%5Ctimes%5B0%2C1%5D%24%7D%5C%5C%20%26u%280%2Cx%29%20%3D%20-%5Csin%28%5Cpi%20x%29%2C%5C%5C%20%26u%28t%2C-1%29%20%3D%20u%28t%2C1%29%20%3D%200%20%5Cend%7Bsplit%7D)
 - Nonlinear diffusion equation
 - 1D convection-diffusion equation
 - 2D convection-diffusion equation

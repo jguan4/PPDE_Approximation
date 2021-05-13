@@ -51,11 +51,11 @@ elif train_toggle == 2:
 	pinn.train_nn()
 	pinn.test_nn()	
 elif train_toggle == 3:
-	pinn.train_nn(save_for_plot = True)
-elif train_toggle == 4:
 	pinn.load_nn(None)
 	figure_path = folder_path+"Data/"
 	pinn.plot_test(figure_path)
+elif train_toggle == 4:
+	pinn.train_nn(save_for_plot = True)
 elif train_toggle == 5:
 	pinn.load_nn(None)
 	pinn.test_nn(record_path = record_path)

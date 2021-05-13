@@ -65,6 +65,20 @@ The weights will be saved to the following file:
 ### Load Trained Weights and Test
 If one wishes to load trained weights to test and plot the approximations, set `train_toggle` to 3. 
 
+### Save Intermediate Weights during Training
+If one wishes to save weights at each epoch, set `train_toggle` to 4. The saved weights can be found in 
+`./Plot/Data/Weights/{algorithm}/{environment}/Net{network structure}_Layers{network setup}_Ntr{sizes of samples}_h{mesh size}_Reg{regularization parameter}_Sample{input 6}_Weight{input 8}_Opt{optimizer toggle}_L{dimension of reduced basis}/`
+
+### Visualize Loss Landscape around a Trained Weights
+If one wishes to plot the loss landscape around the optimized weights, set `train_toggle` to 7. Here we follow the algorithm introduced in *Visualizing the Loss Landscape of Neural Nets* (2017). We generate two random directions and visualize the landscape around the trained weights according to the random directions. 
+
+### Visualize Optimization Trajectory
+If one wishes to plot the optimization trajectory from initialization to the final optimized weights, set `train_toggle` to 8. We find the two most explanatory PCA directions of the difference of weights between each epoch and the final weights. Then we visualize the loss landscape along the PCA directions and plot the projection of weights at each epoch in the PCA directions. 
+
+### Save Derivatives during Training 
+If one wants to save the first, second derivative and residual landscape during training, set `train_toggle` to 10. We save the matlab files containing the derivatives and residuals in the following folder:
+`./Plot/Data/{algorithm}/{environment}/Net{network structure}_Layers{network setup}_Ntr{sizes of samples}_h{mesh size}_Reg{regularization parameter}_Sample{input 6}_Weight{input 8}_Opt{optimizer toggle}_L{dimension of reduced basis}/`
+
 ### Environments
 In the `Environments` folder, we provide many testing parameter-dependent PDE problems:
 * Unsteady Burger's equation
@@ -99,7 +113,6 @@ In the `Environments` folder, we provide many testing parameter-dependent PDE pr
     * `CD_1D_9.py`: environment toggle name `CD_1D_9`. The transformation is for a=0.
     * `CD_1D_10.py`: environment toggle name `CD_1D_10`. The transformation is for a=0.25.
     * `CD_1D_11.py`: environment toggle name `CD_1D_11`. The transformation is for a=0.75.
-
   
   * Here is the second 1D convection-diffusion equation we tested. `CD_1D.py`: environment toggle name `CD_1D`. The formulation for this problem is shown below: 
 

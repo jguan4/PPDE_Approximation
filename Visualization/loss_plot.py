@@ -38,7 +38,7 @@ class Loss_Vis:
 		self.generate_pca_direction()
 		self.project_weights()
 		self.generate_space()
-		# self.plot_space()
+		self.plot_space()
 		self.plot_trajectory()
 
 	def visualize_path_lev(self, folder):
@@ -75,10 +75,6 @@ class Loss_Vis:
 			biases_diff[:,i] = np.squeeze(diffb)
 
 		self.diff_mat = np.concatenate((weight_diff,biases_diff), axis=0)
-		# uw, sw, vh = np.linalg.svd(weight_diff,full_matrices=False)
-		# pw = uw*(sw)
-		# ub, sb, vh = np.linalg.svd(biases_diff,full_matrices=False)
-		# pb = ub*(sb)
 		self.old_weights_lin = final_weight
 		self.old_biases_lin = final_biase
 		

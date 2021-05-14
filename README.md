@@ -24,6 +24,7 @@ The implementation is structured in a way such that each component is implemente
   - Levenberg-Marquardt 
   - Stochastic Gradient Descent
   - LBFGS
+  - Adam
 
 
 ## Dependent Packages
@@ -47,7 +48,7 @@ In order to run `NN_Driver.py`, one needs to provide `DEMO.py` with appropriate 
 7. A string that selects the envrionment used. For "Poisson", the driver will test the nonlinear diffusion problem; for "CD_steady", the driver will test the 2D convection-diffusion problem; for "Burger", the driver will test the viscous Burgers' equation; for "CD_1D", the driver will test the 1D convection-diffusion problem.
 8. A string that represents the weighting of each part in the loss function. This is more tailored for PINN. The string is formatted like an array with 4 entries, each one corresponding to the weighting of each type of the samples. One example is '[1,3,1,0]', which will weight the mean squared errors produced by Dirichlet boundary condition samples 3 times more heavier than the other types of samples. 
 9. A string that serves as a toggle to select the type of networks used. For 'Dense', the driver will run a dense neural network; for 'Res', the driver will run a ResNet; for 'RNN', the driver will run a RNN. 
-10. A string that serves as a toggle to select the optimizer used. For 'lm', the driver will use Leverberg-Marquardt; for 'sgd', the driver will use Stochastic Gradient Descent; for 'lbfgs', the driver will use L-BFGS. 
+10. A string that serves as a toggle to select the optimizer used. For 'lm', the driver will use Leverberg-Marquardt; for 'sgd', the driver will use Stochastic Gradient Descent; for 'lbfgs', the driver will use L-BFGS; for 'adam', the driver will use Adam. 
 11. An integer that represents the dimension of the reduced basis L. If this entry is not provided, the driver will interpret L as 0. 
 
 The easiest way to do so is to use `run_DEMO.py`. In `run_DEMO.py`, one could define the inputs as a list in the variable `combs`. One example is 
@@ -138,3 +139,4 @@ In the `Environments` folder, we provide many testing parameter-dependent PDE pr
   * `CD_2D_5.py`: environment toggle name `CD_2D_5`. This problem has more than one boundary layer. The formulation for this problem is shown below: 
 
   ![2d convection-diffusion2](https://latex.codecogs.com/gif.latex?%5Cbegin%7Balign*%7D%20%26-%5Cepsilon%28u_%7Bxx%7D&plus;u_%7Byy%7D%29&plus;%281&plus;%28x&plus;1%29%5E2/4%29u_y%20%3D%200%2C%20%5Cquad%20%5Ctext%7Bfor%20%7D%28x%2Cy%29%5Cin%20%28-1%2C1%29%5Ctimes%20%28-1%2C1%29%5C%5C%20%26%20u%28-1%2Cy%29%20%3D%20%281-%281&plus;y%29/2%29%5E3%2C%20%5Cquad%20u%281%2Cy%29%20%3D%20%281-%281&plus;y%29/2%29%5E2%5C%5C%20%26%20u%28x%2C-1%29%20%3D%201%2C%20%5Cquad%20u_y%28x%2C1%29%20%3D%200%20%5Cend%7B%7D)
+

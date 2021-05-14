@@ -13,8 +13,12 @@ def compile_string(input_list):
 train_toggle = 3
 
 # 1: train from scratch, save weights; 
-# 2: train from existing weights
-# 3: load weights, test and plot 
+# 2: train from existing weight;
+# 3: load weights, test and plot; 
+# 4: train and save intermediate weights;
+# 7: visualize loss landscape around optimized weights;
+# 8: visualize optimizaiton trajectory;
+# 10: save derivatives and residuals from intermediate weights.
 
 # refer to ReadMe in github repository for clarification of the following variable.
 combs = [

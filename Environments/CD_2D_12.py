@@ -12,9 +12,9 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import csv
 
-class CD_2D_1:
+class CD_2D_12:
 	def __init__(self, N_p_train, N_p_test, h, type_weighting = [1,1,1,1], inner = False, sampling_method = 0, add_sample = False, path_env = "./Environments/", L = 0):
-		self.name = "CD_2D_1"
+		self.name = "CD_2D_12"
 		self.sampling_method = sampling_method
 		self.u_dim = 2
 		self.P_dim = 1
@@ -43,12 +43,17 @@ class CD_2D_1:
 		elif self.sampling_method == 1 or self.sampling_method == 2:
 			self.state_space_size = self.u_dim+self.P_dim
 			self.output_space_size  = 1
+			self.Ns = N_p_train
 			self.lb = np.array([-1.0, -1.0, 1e-4])
 			self.ub = np.array([1.0, 1.0, 1.0])
 			self.Nf = N_p_train[0]
 			self.Nb = N_p_train[1]
 			self.Nn = N_p_train[2]
 			self.N0 = N_p_train[3]
+			if len(N_p_train)>4:
+				self.Nr = N_p_train[4]
+			else:
+				self.Nr = 0
 
 			h_sample = 2/np.ceil(np.sqrt(np.max(N_p_train)))
 
@@ -112,7 +117,7 @@ class CD_2D_1:
 	def generate_para_test(self):
 		np.random.seed(10)
 		# sampling = LHS(xlimits=self.plimits)
-		sampling = LHS(xlimits=np.array([[-2,0]]))
+		sampling = LHS(xlimits=np.array([[-4,0]]))
 
 		# check if test parameters exist
 		if os.path.exists(self.path_env+"CD_2D_{0}.npy".format(self.N_p_test)):
@@ -184,21 +189,23 @@ class CD_2D_1:
 		B = sparse.kron(S1,I)
 		C = sparse.kron(Iy,S2)
 
-		Dy_diag = (1+(self.X_in+1)**2/4)
-		# Dx_diag = 0*self.X_in
+		Dy_diag = np.sqrt(3)/2*np.ones((self.X_in.shape))
+		Dx_diag = -1/2*np.ones((self.Y_in.shape))
 		Dy = sparse.diags(Dy_diag.flatten(),0,shape = (tot_dim,tot_dim))
-		# Dx = sparse.diags(Dx_diag.flatten(),0,shape = (tot_dim,tot_dim))
+		Dx = sparse.diags(Dx_diag.flatten(),0,shape = (tot_dim,tot_dim))
 
-		L = -xi0*A/(self.h**2)+Dy@B/(2*self.h)#+Dx@C/(2*self.h)
+		L = -xi0*A/(self.h**2)+Dy@B/(2*self.h)+Dx@C/(2*self.h)
 
 		v1 = np.zeros((tot_dim,1))
 		v2 = np.zeros((tot_dim,1))
 		v3 = np.zeros((tot_dim,1))
-		v1[0:self.nx] = 1
-		v2[range(0,tot_dim,self.nx),0] = (1 - ((1+self.yt)/2))**3
-		v3[range(self.nx-1,tot_dim,self.nx),0] = (1 - ((1+self.yt)/2))**2
+		v4 = np.zeros((tot_dim,1))
+		v1[int(self.nx/2):self.nx] = 1 # lower
+		v2[range(0,tot_dim,self.nx),0] = 0 #left
+		v3[range(self.nx-1,tot_dim,self.nx),0] = 1 #right 
+		v4[-self.nx:-1] = 0 #upper
 
-		F = xi0*(v1+v2+v3)/(self.h**2)+Dy@v1/(2*self.h)#+Dx@(v2-v3)/(2*self.h)
+		F = xi0*(v1+v2+v3+v4)/(self.h**2)+Dy@(v1-v4)/(2*self.h)+Dx@(v2-v3)/(2*self.h)
 		return L,F
 
 	def generate_one_sol(self, p, test = False):
@@ -238,10 +245,12 @@ class CD_2D_1:
 	def fill_BC(self,inner_u,p):
 		u_temp = inner_u.reshape((self.ny,self.nx))
 		U = np.zeros((self.N,self.N))
-		U[1::,1:-1] = u_temp
-		U[1::,0] = (1 - ((1+self.yt)/2))**3
-		U[1::,-1] =( 1 - ((1+self.yt)/2))**2
-		U[0,:] = 1
+		U[1:-1,1:-1] = u_temp
+		U[:,0] = 0 # left
+		U[:,-1] = 1 # right
+		U[-1,:] = 0 # upper
+		U[0,:] = 0 # lower
+		U[0,int(self.nx/2)::] = 1
 		return U
 
 	def create_inner_X(self, p):
@@ -323,10 +332,9 @@ class CD_2D_1:
 
 	def generate_PINN_samples(self, app_str = ""):
 
-		Ns = [self.Nf, self.Nb, self.Nn, self.N0]
 		samples_list = []
 
-		filename = "CD_2D_1ver_{0}{1}1.npz".format(Ns,app_str)
+		filename = "CD_2D_12ver_{0}{1}.npz".format(self.Ns,app_str)
 		if os.path.exists("{1}{0}".format(filename,self.path_env)):
 			npzfile = np.load("{1}{0}".format(filename,self.path_env))
 			if self.Nf>0:
@@ -344,6 +352,11 @@ class CD_2D_1:
 			else:
 				self.X0_tf = None
 				self.u0_tf = None
+			if self.Nr>0:
+				self.Xr = npzfile['Xr']
+				target_r = np.zeros([self.Nr,1])
+			else:
+				self.Xr_tf = None
 		else:
 			np.random.seed(10)
 
@@ -356,25 +369,39 @@ class CD_2D_1:
 			sampling_b = LHS(xlimits = np.array([[-1, 1], [-4, 0]]))
 			Nb_side = self.Nb//4
 			x_p_b = sampling_b(Nb_side)
+
 			pb = x_p_b[:,[1]]
 			pb_10= np.power(10, pb)
 			xyb = x_p_b[:,[0]]
+			posinds = xyb>0
+			neginds = xyb<=0
+
 			lb = np.concatenate((-np.ones((Nb_side,1)),xyb,pb_10),axis = 1)
-			ulb = -(1-np.exp((xyb-1)/pb_10))/(1-np.exp(-2/pb_10))
+			ulb = np.zeros((Nb_side,1))
 			rb = np.concatenate((np.ones([Nb_side,1]),xyb,pb_10),axis = 1)
-			urb = (1-np.exp((xyb-1)/pb_10))/(1-np.exp(-2/pb_10))
+			urb = np.ones((Nb_side,1))
 			tb = np.concatenate((xyb,np.ones((Nb_side,1)),pb_10),axis = 1)
 			utb = np.zeros((Nb_side,1))
 			db = np.concatenate((xyb,-np.ones((Nb_side,1)),pb_10),axis = 1)
-			udb = xyb
+			udb = np.zeros((Nb_side,1))
+			udb[posinds] = 1
+
 
 			self.Xb_d = np.concatenate((lb,rb,tb,db),axis = 0)
 			self.ub_d = np.concatenate((ulb,urb,utb,udb),axis = 0)
 
+			if self.Nr>0:
+				sampling_r = LHS(xlimits = self.x_p_domain)
+				self.Xr = sampling_f(self.Nr)
+				self.Xr[:,2] = np.power(10, self.Xr[:,2])
+				target_r = np.zeros([self.Nr,1])
+			else:
+				self.Xr = None
+
 			if self.N0>0:
 				sampling_0 = LHS(xlimits = self.x_p_domain)
 				x = sampling_0(self.N0)
-				x[:,1] = np.power(10, x[:,1])
+				x[:,2] = np.power(10, x[:,2])
 
 				str_arr = app_str.split("_")
 				if len(str_arr)==3:
@@ -407,13 +434,15 @@ class CD_2D_1:
 				# self.X0 = np.concatenate((x,1e-4*np.ones((self.N0,1))),axis = 1)
 				self.X0 = x
 				if app_str == "_reduced":
-					self.u0 = self.X0[:,[0]]
+					leftinds = self.X0[:,1]+np.sqrt(3)*self.X0[:,0]<-1
+					self.u0 = np.ones((self.N0,1))
+					self.u0[leftinds] = 0
 				else:
 					self.u0 = self.u_exact(self.X0)
-				np.savez(self.path_env+"{0}".format(filename), Xf = self.Xf, Xb_d = self.Xb_d, ub_d = self.ub_d, X0 = self.X0, u0 = self.u0)
+				np.savez(self.path_env+"{0}".format(filename), Xf = self.Xf, Xb_d = self.Xb_d, ub_d = self.ub_d, X0 = self.X0, u0 = self.u0, Xr = self.Xr)
 			else:
-				np.savez(self.path_env+"{0}".format(filename), Xf = self.Xf, Xb_d = self.Xb_d, ub_d = self.ub_d)
-		
+				np.savez(self.path_env+"{0}".format(filename), Xf = self.Xf, Xb_d = self.Xb_d, ub_d = self.ub_d,Xr = self.Xr)
+			
 		if self.Nf>0:
 			t_tf = tf.constant((),shape = (self.Nf,0),dtype = tf.float32)
 			x_tf = tf.constant(self.Xf[:,[0]],dtype = tf.float32)
@@ -457,6 +486,18 @@ class CD_2D_1:
 			weight = tf.constant(self.type_weighting[3], dtype = tf.float32)
 			self.X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':"Init", 'weight':weight}
 			samples_list.append(self.X0_dict)
+
+		if self.Nr>0:
+			t_tf = tf.constant((),shape = (self.Nr,0),dtype = tf.float32)
+			x_tf = tf.constant(self.Xr[:,[0]],dtype = tf.float32)
+			y_tf = tf.constant(self.Xr[:,[1]],dtype = tf.float32)
+			xi_tf = tf.constant(self.Xr[:,[2]],dtype = tf.float32)
+			target_tf = tf.constant(target_r, dtype = tf.float32)
+			N = tf.constant(self.Nr, dtype = tf.float32)
+			weight = tf.constant(self.type_weighting[4], dtype = tf.float32)
+			self.Xr_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'Reduced', 'weight':weight}
+			samples_list.append(self.Xr_dict)
+
 		return samples_list
 
 	def generate_PINN_tests(self):
@@ -472,8 +513,15 @@ class CD_2D_1:
 		return X0_dict, target_tf
 
 	@tf.function
-	def f_res(self, x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy):
-		f_u = -xi_tf*(u_xx+u_yy)+u_y
+	def f_res(self, x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy, u_xy):
+		# f_u = -xi_tf*(u_xx+u_yy)-u_x/2+tf.math.sqrt(3.0)/2*u_y
+		f_u = (-xi_tf)*(u_xx+u_yy)-u_x/2+tf.math.sqrt(3.0)/2*u_y+0.01*(u_xx/4+3*u_yy/4-tf.math.sqrt(3.0)/2*u_xy)
+		# f_u = (-u_xx*xi_tf+u_x-1)/xi_tf
+		return f_u
+
+	@tf.function
+	def f_reduced_res(self, x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy, u_xy):
+		f_u = -u_x/2+tf.math.sqrt(3.0)/2*u_y
 		# f_u = (-u_xx*xi_tf+u_x-1)/xi_tf
 		return f_u
 

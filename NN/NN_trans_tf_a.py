@@ -11,16 +11,18 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 tf.random.set_seed(5)
 
-class NN_tf:
+class NN_trans_tf_a:
 	def __init__(self, input_size, output_size, layers, env, regular_alphas):
 		self.env = env
-		self.name = "DNN"
+		self.name = "DNN_trans_a"
 		self.input_size = input_size
 		self.output_size = output_size
 		self.layers = layers
 		self.regular_alphas = tf.constant(regular_alphas[0], dtype = tf.float32)
-		self.lb = tf.constant(self.env.lb, dtype = tf.float32)
-		self.ub = tf.constant(self.env.ub, dtype = tf.float32)
+		self.a = tf.Variable(1, trainable=True, dtype = tf.float32)
+		self.lb = tf.Variable([(self.a-1)*1e4,1e-4], dtype = tf.float32)
+		self.ub = tf.Variable([self.a*1e4, 1], dtype = tf.float32)
+		# self.a = tf.constant(1, dtype=tf.float32)
 		self.initialize_NN()
 		self.loss_f_list = []
 		self.loss_b_d_list = []
@@ -90,7 +92,17 @@ class NN_tf:
 	def forward(self, x_tf, y_tf, t_tf, xi_tf):
 		num_layers = len(self.weights) 
 		# x_tf = x_tf+0.5/xi_tf
+
+		# x_tf = (self.a-x_tf)/xi_tf
+		x_tf = self.a+(-x_tf)/xi_tf
+		# x_tf = self.env.trans_layer(x_tf, y_tf, t_tf, xi_tf)
 		X = tf.concat((x_tf, y_tf, t_tf, xi_tf), axis = -1)
+
+		# self.lb[0].assign((self.a-1)*1e4)
+		# self.ub[0].assign((self.a)*1e4)
+
+		self.lb[0].assign(self.a-1e4)
+		self.ub[0].assign(self.a)
 
 		# H = (X - self.lb)/(self.ub - self.lb)
 		# H = (X - self.lb)/(self.ub - self.lb)+0.5 #skewcluster
@@ -112,10 +124,13 @@ class NN_tf:
 	@tf.function
 	def derivatives(self, x_tf, y_tf, t_tf, xi_tf):
 		with tf.GradientTape(persistent = True) as tape1:
+			# xt_tf = (1-x_tf)/xi_tf
 			tape1.watch(x_tf)
 			tape1.watch(y_tf)
 			tape1.watch(t_tf)
+			# tape1.watch(xt_tf)
 			with tf.GradientTape(persistent = True) as tape:
+				# tape.watch(xt_tf)
 				tape.watch(x_tf)
 				tape.watch(y_tf)
 				tape.watch(t_tf)
@@ -125,33 +140,25 @@ class NN_tf:
 			u_t = tape.gradient(H, t_tf)
 		u_xx = tape1.gradient(u_x, x_tf)
 		u_yy = tape1.gradient(u_y, y_tf)
-		u_xy = tape1.gradient(u_x, y_tf)
-		return H, u_x, u_y, u_t, u_xx, u_yy, u_xy
+		return H, u_x, u_y, u_t, u_xx, u_yy
 
 	@tf.function
 	def compute_residual(self, x_tf, y_tf, t_tf, xi_tf, target):
-		u, u_x, u_y, u_t, u_xx, u_yy, u_xy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
-		f_res = self.env.f_res(x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy, u_xy)
-		f_err = f_res - target
-		return f_err
-
-	@tf.function
-	def compute_reduced_residual(self, x_tf, y_tf, t_tf, xi_tf, target):
-		u, u_x, u_y, u_t, u_xx, u_yy, u_xy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
-		f_res = self.env.f_reduced_res(x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy, u_xy)
+		u, u_x, u_y, u_t, u_xx, u_yy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
+		f_res = self.env.f_res(x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy)
 		f_err = f_res - target
 		return f_err
 
 	@tf.function 
 	def compute_neumann(self, x_tf, y_tf, t_tf, xi_tf, target):
-		u, u_x, u_y, u_t, u_xx, u_yy, u_xy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
+		u, u_x, u_y, u_t, u_xx, u_yy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
 		ub_n_p = self.env.neumann_bc(x_tf, y_tf, t_tf, xi_tf, u_x, u_y)
 		err = ub_n_p - target
 		return err
 
 	@tf.function
 	def compute_solution(self, x_tf, y_tf, t_tf, xi_tf, target):
-		u_p = self.forward(x_tf, y_tf, t_tf, xi_tf)
+		u_p, u_x, u_y, u_t, u_xx, u_yy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
 		err = u_p - target
 		return err
 
@@ -204,12 +211,6 @@ class NN_tf:
 				if save_toggle:
 					self.loss_init_list.append(loss_0.numpy())
 
-			elif name_i == "Reduced":
-				f_res = self.compute_reduced_residual(x_tf, y_tf, t_tf, xi_tf, target)
-				f_u = f_res*np.sqrt(weight/N)
-				loss_f = tf.math.reduce_sum(f_u**2)/2
-				loss_val = loss_val + loss_f
-
 		if self.regular_alphas != 0:
 			weights = tf.concat(self.weights, axis = -1)
 			biases = tf.concat(self.biases, axis = -1)
@@ -222,13 +223,15 @@ class NN_tf:
 		with tf.GradientTape(persistent = True) as tape:
 			err = self.compute_solution(x_tf, y_tf, t_tf, xi_tf, target)*tf.math.sqrt(weight/N)
 			err = tf.reshape(err, [tf.reduce_prod(tf.shape(err)),1])
+		a_jacobian = tape.jacobian(err, self.a)
 		weights_jacobians = tape.jacobian(err, self.weights)
 		biases_jacobians = tape.jacobian(err, self.biases)
 
 		jacobs_tol_W = tf.squeeze(tf.concat(weights_jacobians, axis = -1))
 		jacobs_tol_b = tf.squeeze(tf.concat(biases_jacobians, axis = -1))
+		jacobs_tol_a = tf.concat(a_jacobian, axis = -1)
 		del tape
-		return jacobs_tol_W, jacobs_tol_b, err
+		return jacobs_tol_W, jacobs_tol_b, jacobs_tol_a, err
 
 	@tf.function
 	def construct_Jacobian_residual(self, x_tf, y_tf, t_tf, xi_tf, target, N, weight):
@@ -236,6 +239,7 @@ class NN_tf:
 			f_res = self.compute_residual(x_tf, y_tf, t_tf, xi_tf, target)
 			err = (f_res)*tf.math.sqrt(weight/N)
 			err = tf.reshape(err, [tf.reduce_prod(tf.shape(err)),1])
+		a_jacobian = tape.jacobian(err, self.a)
 		weights_jacobians = tape.jacobian(err, self.weights)
 		biases_jacobians = tape.jacobian(err, self.biases)
 		if biases_jacobians[-1] is None:
@@ -243,49 +247,38 @@ class NN_tf:
 				self.output_size, 1, self.output_size])
 		jacobs_tol_W = tf.squeeze(tf.concat(weights_jacobians, axis = -1))
 		jacobs_tol_b = tf.squeeze(tf.concat(biases_jacobians, axis = -1))
+		jacobs_tol_a = tf.concat(a_jacobian, axis = -1)
 		del tape
-		return jacobs_tol_W, jacobs_tol_b, err
-
-	@tf.function
-	def construct_Jacobian_reduced_residual(self, x_tf, y_tf, t_tf, xi_tf, target, N, weight):
-		with tf.GradientTape(persistent = True) as tape:
-			f_res = self.compute_reduced_residual(x_tf, y_tf, t_tf, xi_tf, target)
-			err = (f_res)*tf.math.sqrt(weight/N)
-			err = tf.reshape(err, [tf.reduce_prod(tf.shape(err)),1])
-		weights_jacobians = tape.jacobian(err, self.weights)
-		biases_jacobians = tape.jacobian(err, self.biases)
-		if biases_jacobians[-1] is None:
-			biases_jacobians[-1] = tf.zeros([tf.shape(biases_jacobians[0])[0], \
-				self.output_size, 1, self.output_size])
-		jacobs_tol_W = tf.squeeze(tf.concat(weights_jacobians, axis = -1))
-		jacobs_tol_b = tf.squeeze(tf.concat(biases_jacobians, axis = -1))
-		del tape
-		return jacobs_tol_W, jacobs_tol_b, err
+		return jacobs_tol_W, jacobs_tol_b, jacobs_tol_a, err
 
 	@tf.function
 	def construct_Jacobian_neumann(self, x_tf, y_tf, t_tf, xi_tf, target, N, weight):
 		with tf.GradientTape(persistent = True) as tape:
 			err = self.compute_neumann(x_tf, y_tf, t_tf, xi_tf, target)*tf.math.sqrt(weight/N)
 			err = tf.reshape(err, [tf.reduce_prod(tf.shape(err)),1])
+		a_jacobian = tape.jacobian(err, self.a)
 		weights_jacobians = tape.jacobian(err, self.weights)
 		biases_jacobians = tape.jacobian(err, self.biases)
 		if biases_jacobians[-1] is None:
 			biases_jacobians[-1] = tf.zeros([tf.shape(biases_jacobians[0])[0], self.output_size, 1, self.output_size])
 		jacobs_tol_W = tf.squeeze(tf.concat(weights_jacobians, axis = -1))
 		jacobs_tol_b = tf.squeeze(tf.concat(biases_jacobians, axis = -1))
+		jacobs_tol_a = tf.concat(a_jacobian, axis = -1)
 		del tape
-		return jacobs_tol_W, jacobs_tol_b, err
+		return jacobs_tol_W, jacobs_tol_b, jacobs_tol_a, err
 
 	def construct_Gradient(self, samples_list):
 		with tf.GradientTape(persistent = True) as tape:
 			loss_val = self.loss(samples_list)
 		weights_grads = tape.gradient(loss_val, self.weights)
 		biases_grads = tape.gradient(loss_val, self.biases)
+		a_grads = tape.gradient(loss_val, self.a)
 		if biases_grads[-1] is None:
 			biases_grads[-1] = tf.zeros([1, self.output_size])
 		grads_tol_W = tf.transpose(tf.concat(weights_grads, axis = -1))
 		grads_tol_b = tf.transpose(tf.concat(biases_grads, axis = -1))
-		return loss_val, grads_tol_W, grads_tol_b
+		grads_tol_a = tf.transpose(tf.concat(a_grads, axis = -1))
+		return loss_val, grads_tol_W, grads_tol_b, grads_tol_a
 
 	def construct_Hessian(self, loss_val, tape_loss):		
 		num_layers = len(self.biases) 
@@ -300,13 +293,13 @@ class NN_tf:
 		hessian_b = tf.squeeze(tf.concat(hessian_b, axis = 3))
 		return hessian_W, hessian_b
 		
-	def update_weights_biases(self, weights_update, biases_update):
+	def update_weights_biases(self, weights_update, biases_update, a_update):
 		num_layers = len(self.biases)
 		W_ind_count = 0
 		b_ind_count = 0 
 		for l in range(num_layers):
 			W_len = np.prod(self.weights_dims[l])
-			b_len = np.prod(self.biases_dims[l])
+			b_len = np.prod(self.biases_dims[l]) 
 			W_update = weights_update[W_ind_count:W_ind_count+W_len]
 			b_update = biases_update[b_ind_count:b_ind_count+b_len]
 			self.weights[l].assign_add(tf.reshape(W_update, [1, W_len]))
@@ -314,8 +307,9 @@ class NN_tf:
 
 			W_ind_count += W_len
 			b_ind_count += b_len
+		self.a.assign_add(a_update)
 
-	def set_weights_biases(self, new_weights, new_biases, lin = False):
+	def set_weights_biases(self, new_weights, new_biases, new_a, lin = False):
 		num_layers = len(self.biases) 
 		if not lin:
 			for l in range(num_layers):
@@ -337,7 +331,8 @@ class NN_tf:
 				self.biases[l].assign(b_new)
 				W_ind_count += W_len
 				b_ind_count += b_len
-		return self.weights, self.biases
+		self.a.assign(new_a)
+		return self.weights, self.biases, self.a
 
 	def get_weights_biases(self):
 		weights = []
@@ -354,13 +349,13 @@ class NN_tf:
 			biases.append(b_copy)
 			weights_lin = tf.concat((weights_lin,tf.reshape(W_copy, [1, W_len])),axis = 1) if l != 0 else tf.reshape(W_copy, [1, W_len])
 			biases_lin = tf.concat((biases_lin,tf.reshape(b_copy, [1, b_len])),axis = 1) if l != 0 else tf.reshape(b_copy, [1, b_len])
-		return weights, biases, weights_lin, biases_lin
+		return weights, biases, weights_lin, biases_lin, self.a
 
 
-	def set_weights_loss(self, samples_list, new_weights, new_biases):
+	def set_weights_loss(self, samples_list, new_weights, new_biases, new_a):
 		new_weights = tf.constant(new_weights,dtype = tf.float32)
 		new_biases = tf.constant(new_biases,dtype = tf.float32)
-		self.set_weights_biases(tf.squeeze(new_weights),tf.squeeze(new_biases),lin=True)
+		self.set_weights_biases(tf.squeeze(new_weights),tf.squeeze(new_biases), tf.squeeze(new_a), lin=True)
 		loss_val_tf = self.loss(samples_list)
 		return loss_val_tf.numpy()
 
@@ -408,11 +403,12 @@ class NN_tf:
 		return sample_batch_list
 
 	def save_weights_biases(self, filename):
-		_, _, weights_lin, biases_lin = self.get_weights_biases()
-		np.savez(filename, weights_lin = weights_lin.numpy(), biases_lin = biases_lin.numpy())
+		_, _, weights_lin, biases_lin, a = self.get_weights_biases()
+		np.savez(filename, weights_lin = weights_lin.numpy(), biases_lin = biases_lin.numpy(), a = self.a.numpy())
 
 	def load_weights_biases(self, filename):
 		npzfile = np.load(filename)
 		weights_lin = npzfile['weights_lin']
 		biases_lin = npzfile['biases_lin']
-		self.set_weights_biases(np.squeeze(weights_lin),np.squeeze(biases_lin),lin = True)
+		a = npzfile['a']
+		self.set_weights_biases(np.squeeze(weights_lin),np.squeeze(biases_lin), np.squeeze(a), lin = True)

@@ -11,16 +11,17 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 tf.random.set_seed(5)
 
-class NN_tf:
+class NN_trans_tf_dense:
 	def __init__(self, input_size, output_size, layers, env, regular_alphas):
 		self.env = env
-		self.name = "DNN"
+		self.name = "DNN_trans_dense"
 		self.input_size = input_size
 		self.output_size = output_size
 		self.layers = layers
 		self.regular_alphas = tf.constant(regular_alphas[0], dtype = tf.float32)
 		self.lb = tf.constant(self.env.lb, dtype = tf.float32)
 		self.ub = tf.constant(self.env.ub, dtype = tf.float32)
+		# self.a = tf.constant(1, dtype=tf.float32)
 		self.initialize_NN()
 		self.loss_f_list = []
 		self.loss_b_d_list = []
@@ -36,6 +37,18 @@ class NN_tf:
 		self.biases_dims = []
 		self.weights_len = 0
 		self.biases_len = 0
+
+		# create transformation layer
+		W_name = "weight_{0}".format("transform")
+		W = self.xavier_init(size=[1, self.input_size*self.input_size], name = W_name)
+		self.weights_len += self.input_size**2
+		b_name = "bias_{0}".format("transform")
+		b = tf.Variable(tf.zeros(shape = [1, self.input_size]), name = b_name)
+		self.biases_len += self.input_size
+		self.weights_dims.append((self.input_size, self.input_size))
+		self.biases_dims.append((1, self.input_size))
+		self.weights.append(W)
+		self.biases.append(b)
 
 		# create input layer
 		W_name = "weight_{0}".format("input")
@@ -90,6 +103,9 @@ class NN_tf:
 	def forward(self, x_tf, y_tf, t_tf, xi_tf):
 		num_layers = len(self.weights) 
 		# x_tf = x_tf+0.5/xi_tf
+
+		# x_tf = (0.5-x_tf)/xi_tf
+		# x_tf = self.env.trans_layer(x_tf, y_tf, t_tf, xi_tf)
 		X = tf.concat((x_tf, y_tf, t_tf, xi_tf), axis = -1)
 
 		# H = (X - self.lb)/(self.ub - self.lb)
@@ -112,10 +128,13 @@ class NN_tf:
 	@tf.function
 	def derivatives(self, x_tf, y_tf, t_tf, xi_tf):
 		with tf.GradientTape(persistent = True) as tape1:
+			# xt_tf = (1-x_tf)/xi_tf
 			tape1.watch(x_tf)
 			tape1.watch(y_tf)
 			tape1.watch(t_tf)
+			# tape1.watch(xt_tf)
 			with tf.GradientTape(persistent = True) as tape:
+				# tape.watch(xt_tf)
 				tape.watch(x_tf)
 				tape.watch(y_tf)
 				tape.watch(t_tf)
@@ -125,33 +144,32 @@ class NN_tf:
 			u_t = tape.gradient(H, t_tf)
 		u_xx = tape1.gradient(u_x, x_tf)
 		u_yy = tape1.gradient(u_y, y_tf)
-		u_xy = tape1.gradient(u_x, y_tf)
-		return H, u_x, u_y, u_t, u_xx, u_yy, u_xy
+		return H, u_x, u_y, u_t, u_xx, u_yy
 
 	@tf.function
 	def compute_residual(self, x_tf, y_tf, t_tf, xi_tf, target):
-		u, u_x, u_y, u_t, u_xx, u_yy, u_xy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
-		f_res = self.env.f_res(x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy, u_xy)
+		u, u_x, u_y, u_t, u_xx, u_yy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
+		f_res = self.env.f_res(x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy)
 		f_err = f_res - target
 		return f_err
 
 	@tf.function
 	def compute_reduced_residual(self, x_tf, y_tf, t_tf, xi_tf, target):
-		u, u_x, u_y, u_t, u_xx, u_yy, u_xy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
-		f_res = self.env.f_reduced_res(x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy, u_xy)
+		u, u_x, u_y, u_t, u_xx, u_yy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
+		f_res = self.env.f_reduced_res(x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy)
 		f_err = f_res - target
 		return f_err
 
 	@tf.function 
 	def compute_neumann(self, x_tf, y_tf, t_tf, xi_tf, target):
-		u, u_x, u_y, u_t, u_xx, u_yy, u_xy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
+		u, u_x, u_y, u_t, u_xx, u_yy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
 		ub_n_p = self.env.neumann_bc(x_tf, y_tf, t_tf, xi_tf, u_x, u_y)
 		err = ub_n_p - target
 		return err
 
 	@tf.function
 	def compute_solution(self, x_tf, y_tf, t_tf, xi_tf, target):
-		u_p = self.forward(x_tf, y_tf, t_tf, xi_tf)
+		u_p, u_x, u_y, u_t, u_xx, u_yy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
 		err = u_p - target
 		return err
 

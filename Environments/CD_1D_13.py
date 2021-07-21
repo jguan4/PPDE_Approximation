@@ -280,6 +280,7 @@ class CD_1D_13:
 			npzfile = np.load("{1}{0}".format(filename,self.path_env))
 			if self.Nf>0:
 				self.Xf = npzfile['Xf']
+				self.Nf = self.Xf.shape[0]
 				target_f = np.zeros([self.Nf,1])
 			else:
 				self.Xf_tf = None
@@ -307,6 +308,26 @@ class CD_1D_13:
 			xmat = xmat[1:-1]
 			x_arr = xmat.reshape((self.Nf,1))
 			self.Xf = np.concatenate((x_arr,eps_arr),axis=1)
+			if app_str == "_mix":
+				rend = 0.25/eps
+				lend = -0.75/eps
+				xmat = np.linspace(lend,rend,xnum+2)
+				xmat = xmat + 0.25e4
+				xmat = xmat[1:-1]
+				x_arr1 = xmat.reshape((self.Nf,1))
+				eps_arr1 = eps_arr
+				Xf1 = np.concatenate((x_arr1,eps_arr1),axis=1)
+				self.Xf = np.concatenate((self.Xf,Xf1),axis=0)
+				self.Nf += self.Nf
+				xin = x_arr
+				xin_norm = (xin+5e3)/1e4
+				xin1 = x_arr1
+				xin_norm1 = (xin1+5e3)/1e4
+				fig, ax = plt.subplots()
+				ax.scatter(xin_norm,eps_arr)
+				ax.scatter(xin_norm1,eps_arr,color='red')
+				plt.show()
+
 
 			# sampling_f = LHS(xlimits = self.x_p_domain)
 			# self.Xf = sampling_f(self.Nf)

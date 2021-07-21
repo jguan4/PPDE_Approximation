@@ -302,7 +302,19 @@ class CD_1D_1:
 				eps = np.power(10,eps_log)
 				eps_arr = np.tile(eps,xnum)
 				eps_arr = eps_arr.reshape((self.Nf,1))
-				rend = np.ones((self.Nf,1))
+				rend = np.ones((epsnum,1))
+				xmat = np.linspace(np.zeros(rend.shape),rend,xnum+2)
+				xmat = xmat[1:-1]
+				x_arr = xmat.reshape((self.Nf,1))
+				self.Xf = np.concatenate((x_arr,eps_arr),axis=1)
+			elif app_str == "_uniform1000":
+				xnum = 1000
+				epsnum = int(self.Nf/xnum)
+				eps_log = np.linspace(-4,0,epsnum)
+				eps = np.power(10,eps_log)
+				eps_arr = np.tile(eps,xnum)
+				eps_arr = eps_arr.reshape((self.Nf,1))
+				rend = np.ones((epsnum,1))
 				xmat = np.linspace(np.zeros(rend.shape),rend,xnum+2)
 				xmat = xmat[1:-1]
 				x_arr = xmat.reshape((self.Nf,1))
@@ -311,7 +323,7 @@ class CD_1D_1:
 				sampling_f = LHS(xlimits = self.x_p_domain)
 				self.Xf = sampling_f(self.Nf)
 				self.Xf[:,1] = np.power(10, self.Xf[:,1])
-				target_f = np.zeros([self.Nf,1])
+			target_f = np.zeros([self.Nf,1])
 
 			sampling_b = LHS(xlimits = np.array([[-4, 0]]))
 			x_p_b = sampling_b(self.Nb//2)
@@ -360,7 +372,10 @@ class CD_1D_1:
 
 				# self.X0 = np.concatenate((x,1e-4*np.ones((self.N0,1))),axis = 1)
 				self.X0 = x
-				self.u0 = self.u_exact(self.X0)
+				if app_str == "_reduced":
+					self.u0 = x[:,[0]]
+				else:
+					self.u0 = self.u_exact(self.X0)
 				np.savez(self.path_env+"{0}".format(filename), Xf = self.Xf, Xb_d = self.Xb_d, ub_d = self.ub_d, X0 = self.X0, u0 = self.u0)
 			else:
 				np.savez(self.path_env+"{0}".format(filename), Xf = self.Xf, Xb_d = self.Xb_d, ub_d = self.ub_d)
@@ -443,6 +458,9 @@ class CD_1D_1:
 					fields=['Problem','Net_struct','Net_setup','Sample','L','relative_err','save_name']
 					record_writer = csv.writer(record, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
 					record_writer.writerow(fields)
+		# print(net.weights[0])
+		# print(net.biases[0])
+		# input()
 		X0_dict, u_test = self.u_exact_test()
 		x_tf = X0_dict["x_tf"]
 		y_tf = X0_dict["y_tf"]

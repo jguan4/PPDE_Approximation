@@ -11,16 +11,17 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 tf.random.set_seed(5)
 
-class NN_tf:
+class NN_trans_tf:
 	def __init__(self, input_size, output_size, layers, env, regular_alphas):
 		self.env = env
-		self.name = "DNN"
+		self.name = "DNN_trans"
 		self.input_size = input_size
 		self.output_size = output_size
 		self.layers = layers
 		self.regular_alphas = tf.constant(regular_alphas[0], dtype = tf.float32)
 		self.lb = tf.constant(self.env.lb, dtype = tf.float32)
 		self.ub = tf.constant(self.env.ub, dtype = tf.float32)
+		# self.a = tf.constant(1, dtype=tf.float32)
 		self.initialize_NN()
 		self.loss_f_list = []
 		self.loss_b_d_list = []
@@ -90,6 +91,9 @@ class NN_tf:
 	def forward(self, x_tf, y_tf, t_tf, xi_tf):
 		num_layers = len(self.weights) 
 		# x_tf = x_tf+0.5/xi_tf
+
+		x_tf = (0.5-x_tf)/xi_tf
+		# x_tf = self.env.trans_layer(x_tf, y_tf, t_tf, xi_tf)
 		X = tf.concat((x_tf, y_tf, t_tf, xi_tf), axis = -1)
 
 		# H = (X - self.lb)/(self.ub - self.lb)
@@ -112,10 +116,13 @@ class NN_tf:
 	@tf.function
 	def derivatives(self, x_tf, y_tf, t_tf, xi_tf):
 		with tf.GradientTape(persistent = True) as tape1:
+			# xt_tf = (1-x_tf)/xi_tf
 			tape1.watch(x_tf)
 			tape1.watch(y_tf)
 			tape1.watch(t_tf)
+			# tape1.watch(xt_tf)
 			with tf.GradientTape(persistent = True) as tape:
+				# tape.watch(xt_tf)
 				tape.watch(x_tf)
 				tape.watch(y_tf)
 				tape.watch(t_tf)
@@ -125,33 +132,25 @@ class NN_tf:
 			u_t = tape.gradient(H, t_tf)
 		u_xx = tape1.gradient(u_x, x_tf)
 		u_yy = tape1.gradient(u_y, y_tf)
-		u_xy = tape1.gradient(u_x, y_tf)
-		return H, u_x, u_y, u_t, u_xx, u_yy, u_xy
+		return H, u_x, u_y, u_t, u_xx, u_yy
 
 	@tf.function
 	def compute_residual(self, x_tf, y_tf, t_tf, xi_tf, target):
-		u, u_x, u_y, u_t, u_xx, u_yy, u_xy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
-		f_res = self.env.f_res(x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy, u_xy)
-		f_err = f_res - target
-		return f_err
-
-	@tf.function
-	def compute_reduced_residual(self, x_tf, y_tf, t_tf, xi_tf, target):
-		u, u_x, u_y, u_t, u_xx, u_yy, u_xy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
-		f_res = self.env.f_reduced_res(x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy, u_xy)
+		u, u_x, u_y, u_t, u_xx, u_yy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
+		f_res = self.env.f_res(x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy)
 		f_err = f_res - target
 		return f_err
 
 	@tf.function 
 	def compute_neumann(self, x_tf, y_tf, t_tf, xi_tf, target):
-		u, u_x, u_y, u_t, u_xx, u_yy, u_xy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
+		u, u_x, u_y, u_t, u_xx, u_yy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
 		ub_n_p = self.env.neumann_bc(x_tf, y_tf, t_tf, xi_tf, u_x, u_y)
 		err = ub_n_p - target
 		return err
 
 	@tf.function
 	def compute_solution(self, x_tf, y_tf, t_tf, xi_tf, target):
-		u_p = self.forward(x_tf, y_tf, t_tf, xi_tf)
+		u_p, u_x, u_y, u_t, u_xx, u_yy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
 		err = u_p - target
 		return err
 
@@ -204,12 +203,6 @@ class NN_tf:
 				if save_toggle:
 					self.loss_init_list.append(loss_0.numpy())
 
-			elif name_i == "Reduced":
-				f_res = self.compute_reduced_residual(x_tf, y_tf, t_tf, xi_tf, target)
-				f_u = f_res*np.sqrt(weight/N)
-				loss_f = tf.math.reduce_sum(f_u**2)/2
-				loss_val = loss_val + loss_f
-
 		if self.regular_alphas != 0:
 			weights = tf.concat(self.weights, axis = -1)
 			biases = tf.concat(self.biases, axis = -1)
@@ -234,22 +227,6 @@ class NN_tf:
 	def construct_Jacobian_residual(self, x_tf, y_tf, t_tf, xi_tf, target, N, weight):
 		with tf.GradientTape(persistent = True) as tape:
 			f_res = self.compute_residual(x_tf, y_tf, t_tf, xi_tf, target)
-			err = (f_res)*tf.math.sqrt(weight/N)
-			err = tf.reshape(err, [tf.reduce_prod(tf.shape(err)),1])
-		weights_jacobians = tape.jacobian(err, self.weights)
-		biases_jacobians = tape.jacobian(err, self.biases)
-		if biases_jacobians[-1] is None:
-			biases_jacobians[-1] = tf.zeros([tf.shape(biases_jacobians[0])[0], \
-				self.output_size, 1, self.output_size])
-		jacobs_tol_W = tf.squeeze(tf.concat(weights_jacobians, axis = -1))
-		jacobs_tol_b = tf.squeeze(tf.concat(biases_jacobians, axis = -1))
-		del tape
-		return jacobs_tol_W, jacobs_tol_b, err
-
-	@tf.function
-	def construct_Jacobian_reduced_residual(self, x_tf, y_tf, t_tf, xi_tf, target, N, weight):
-		with tf.GradientTape(persistent = True) as tape:
-			f_res = self.compute_reduced_residual(x_tf, y_tf, t_tf, xi_tf, target)
 			err = (f_res)*tf.math.sqrt(weight/N)
 			err = tf.reshape(err, [tf.reduce_prod(tf.shape(err)),1])
 		weights_jacobians = tape.jacobian(err, self.weights)

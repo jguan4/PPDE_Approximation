@@ -329,6 +329,7 @@ class CD_2D_7:
 			npzfile = np.load("{1}{0}".format(filename,self.path_env))
 			if self.Nf>0:
 				self.Xf = npzfile['Xf']
+				self.Nf = self.Xf.shape[0]
 				target_f = np.zeros([self.Nf,1])
 			else:
 				self.Xf_tf = None
@@ -351,6 +352,15 @@ class CD_2D_7:
 			sampling_f = LHS(xlimits = self.x_p_domain)
 			self.Xf = sampling_f(self.Nf)
 			self.Xf[:,2] = np.power(10, self.Xf[:,2])
+			if app_str == "_uniform_400":
+				self.Nf += 400
+				sampling_layer = LHS(xlimits = np.array([[0.95,1], [-1, 1], [-4, 0]]))
+				x_p_b = sampling_layer(200)
+				x_p_b[:,2] = np.power(10,x_p_b[:,2])
+				x_p_b_neg = np.copy(x_p_b)
+				x_p_b_neg[:,0] = -x_p_b_neg[:,0]
+				self.Xf = np.concatenate((self.Xf,x_p_b,x_p_b_neg),axis = 0)
+				
 			target_f = np.zeros([self.Nf,1])
 
 			sampling_b = LHS(xlimits = np.array([[-1, 1], [-4, 0]]))
@@ -414,7 +424,10 @@ class CD_2D_7:
 
 				# self.X0 = np.concatenate((x,1e-4*np.ones((self.N0,1))),axis = 1)
 				self.X0 = x
-				self.u0 = self.u_exact(self.X0)
+				if app_str == "_reduced":
+					self.u0 = np.ones((self.N0,1))
+				else:
+					self.u0 = self.u_exact(self.X0)
 				np.savez(self.path_env+"{0}".format(filename), Xf = self.Xf, Xb_d = self.Xb_d, ub_d = self.ub_d, Xb_n = self.Xb_n, ub_n = self.ub_n, X0 = self.X0, u0 = self.u0)
 			else:
 				np.savez(self.path_env+"{0}".format(filename), Xf = self.Xf, Xb_d = self.Xb_d, ub_d = self.ub_d, Xb_n = self.Xb_n, ub_n = self.ub_n)

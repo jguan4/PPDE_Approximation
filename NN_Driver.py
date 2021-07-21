@@ -9,6 +9,11 @@ from Environments.CD_2D_4 import CD_2D_4
 from Environments.CD_2D_5 import CD_2D_5
 from Environments.CD_2D_6 import CD_2D_6
 from Environments.CD_2D_7 import CD_2D_7
+from Environments.CD_2D_8 import CD_2D_8
+from Environments.CD_2D_9 import CD_2D_9
+from Environments.CD_2D_10 import CD_2D_10
+from Environments.CD_2D_12 import CD_2D_12
+from Environments.CD_2D_13 import CD_2D_13
 from Environments.CD_1D_1 import CD_1D_1
 from Environments.CD_1D_2 import CD_1D_2
 from Environments.CD_1D_3 import CD_1D_3
@@ -26,11 +31,27 @@ from Environments.CD_1D_14 import CD_1D_14
 from Environments.CD_1D_15 import CD_1D_15
 from Environments.CD_1D_16 import CD_1D_16
 from Environments.CD_1D_17 import CD_1D_17
+from Environments.CD_1D_19 import CD_1D_19
+from Environments.CD_1D_20 import CD_1D_20
+from Environments.CD_1D_21 import CD_1D_21
+from Environments.CD_1D_22 import CD_1D_22
+from Environments.CD_1D_23 import CD_1D_23
+from Environments.CD_1D_24 import CD_1D_24
+from Environments.CD_1D_25 import CD_1D_25
+from Environments.CD_1D_26 import CD_1D_26
+from Environments.CD_1D_27 import CD_1D_27
 from Environments.Burgers_Equation import Burgers_Equation
 from NN.NN_tf import NN_tf
+from NN.NN_tf_sym import NN_tf_sym
+from NN.NN_trans_tf import NN_trans_tf
+from NN.NN_trans_tf_a import NN_trans_tf_a
+from NN.NN_trans_tf_a1 import NN_trans_tf_a1
+from NN.NN_trans_tf_dense import NN_trans_tf_dense
+from NN.NN_trans_tf_dense1 import NN_trans_tf_dense1
 from NN.ResNet_tf import ResNet_tf
 from NN.RNN_tf import RNN_tf
 from Optimizers.train_lm import train_lm
+from Optimizers.train_lm_a import train_lm_a
 from Optimizers.train_Adam import train_Adam
 from Optimizers.train_sgd import train_sgd
 from Optimizers.train_lbfgs import train_lbfgs
@@ -82,7 +103,7 @@ class NN_Driver:
 		if not os.path.exists(PATH_L):
 			os.makedirs(PATH_L)
 		htemp = 1/2048
-		self.save_name = "Net{6}_Layers{0}_Ntr{1}_h{2}_Reg{3}_Sample{4}_Weight{5}_Opt{7}_L{8}{9}".format(self.layers, Ntr, int(1/htemp), regular_alphas, self.sampling_method, type_weighting, self.net_toggle,self.opt_toggle, self.L, self.app_str)
+		self.save_name = "Net{6}_Layers{0}_Ntr{1}_h{2}_Reg{3}_Sample{4}_Weight{5}_Opt{7}_L{8}{9}_streamline1000".format(self.layers, Ntr, int(1/htemp), regular_alphas, self.sampling_method, type_weighting, self.net_toggle,self.opt_toggle, self.L, self.app_str)
 		self.path_weight = PATH_W + self.save_name+ ".npz"
 		if self.method_str == "PODNN":
 			self.path_log = PATH_L + "Net{6}_Layers{0}_Ntr{1}_h{2}_Reg{3}_Sample{4}_Weight{5}_Opt{7}/L{8}/".format(self.layers, Ntr, int(1/htemp), regular_alphas, self.sampling_method, type_weighting, self.net_toggle,self.opt_toggle,self.L)
@@ -149,6 +170,24 @@ class NN_Driver:
 			self.env = CD_1D_16(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
 		elif self.env_toggle == "CD_1D_17":
 			self.env = CD_1D_17(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+		elif self.env_toggle == "CD_1D_19":
+			self.env = CD_1D_19(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+		elif self.env_toggle == "CD_1D_20":
+			self.env = CD_1D_20(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+		elif self.env_toggle == "CD_1D_21":
+			self.env = CD_1D_21(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+		elif self.env_toggle == "CD_1D_22":
+			self.env = CD_1D_22(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+		elif self.env_toggle == "CD_1D_23":
+			self.env = CD_1D_23(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+		elif self.env_toggle == "CD_1D_24":
+			self.env = CD_1D_24(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+		elif self.env_toggle == "CD_1D_25":
+			self.env = CD_1D_25(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+		elif self.env_toggle == "CD_1D_26":
+			self.env = CD_1D_26(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+		elif self.env_toggle == "CD_1D_27":
+			self.env = CD_1D_27(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
 		elif self.env_toggle == "CD_2D_1":
 			self.env = CD_2D_1(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
 		elif self.env_toggle == "CD_2D_2":
@@ -163,6 +202,17 @@ class NN_Driver:
 			self.env = CD_2D_6(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
 		elif self.env_toggle == "CD_2D_7":
 			self.env = CD_2D_7(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+		elif self.env_toggle == "CD_2D_8":
+			self.env = CD_2D_8(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+		elif self.env_toggle == "CD_2D_9":
+			self.env = CD_2D_9(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+		elif self.env_toggle == "CD_2D_10":
+			self.env = CD_2D_10(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+		elif self.env_toggle == "CD_2D_12":
+			self.env = CD_2D_12(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+		elif self.env_toggle == "CD_2D_13":
+			self.env = CD_2D_13(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+
 
 	def initialize_net(self):
 		if self.net_toggle == "Dense":
@@ -171,6 +221,19 @@ class NN_Driver:
 			self.net = ResNet_tf(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
 		elif self.net_toggle == "RNN":
 			self.net = RNN_tf(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
+		elif self.net_toggle == "Dense_trans":
+			self.net = NN_trans_tf(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
+		elif self.net_toggle == "Dense_trans_a":
+			self.net = NN_trans_tf_a(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
+		elif self.net_toggle == "Dense_trans_a1":
+			self.net = NN_trans_tf_a1(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
+		elif self.net_toggle == "Dense_sym":
+			self.net = NN_tf_sym(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
+		elif self.net_toggle == "Dense_trans_dense":
+			self.net = NN_trans_tf_dense(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
+		elif self.net_toggle == "Dense_trans_dense1":
+			self.net = NN_trans_tf_dense1(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
+
 
 	def process_training_samples(self):
 		if self.net_toggle != "RNN":
@@ -194,7 +257,16 @@ class NN_Driver:
 					pass
 			else:
 				train_lm(self.net, self.samples_list, 1000, 1e-7, 1e-2, 2, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log)
-
+		elif self.opt_toggle == "lm_a":
+			if save_for_plot:
+				self.plot_weight_foldername = "./Plot/Data/Weights/{1}/{0}/{2}".format(self.env_toggle,self.method_str,self.save_name)
+				if not os.path.exists(self.plot_weight_foldername):
+					os.makedirs(self.plot_weight_foldername)
+					train_lm_a(self.net, self.samples_list, 1000, 1e-7, 1e-2, 2, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log, path_plot = self.plot_weight_foldername)
+				else:
+					pass
+			else:
+				train_lm_a(self.net, self.samples_list, 1000, 1e-7, 1e-2, 2, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log)
 		elif self.opt_toggle == "adam":
 			train_Adam(self.net, self.samples_list, 30000, 1e-7, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log)
 		elif self.opt_toggle == "lbfgs":

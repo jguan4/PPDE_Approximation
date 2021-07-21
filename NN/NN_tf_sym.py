@@ -11,10 +11,10 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 tf.random.set_seed(5)
 
-class NN_tf:
+class NN_tf_sym:
 	def __init__(self, input_size, output_size, layers, env, regular_alphas):
 		self.env = env
-		self.name = "DNN"
+		self.name = "DNN_sym"
 		self.input_size = input_size
 		self.output_size = output_size
 		self.layers = layers
@@ -96,7 +96,7 @@ class NN_tf:
 		# H = (X - self.lb)/(self.ub - self.lb)+0.5 #skewcluster
 		# H = (X - self.lb)/(self.ub - self.lb)-0.5 #skewcluster
 		# H = (X - self.lb)/(self.ub - self.lb)-tf.constant(np.array([0.5,0]), dtype = tf.float32)
-		H = (X - self.lb)/(self.ub - self.lb)
+		H = (X - self.lb)/(self.ub - self.lb)*2-1
 		# H = X
 		# H = 0.5*H+0.5
 		for l in range(num_layers-1):
@@ -125,26 +125,18 @@ class NN_tf:
 			u_t = tape.gradient(H, t_tf)
 		u_xx = tape1.gradient(u_x, x_tf)
 		u_yy = tape1.gradient(u_y, y_tf)
-		u_xy = tape1.gradient(u_x, y_tf)
-		return H, u_x, u_y, u_t, u_xx, u_yy, u_xy
+		return H, u_x, u_y, u_t, u_xx, u_yy
 
 	@tf.function
 	def compute_residual(self, x_tf, y_tf, t_tf, xi_tf, target):
-		u, u_x, u_y, u_t, u_xx, u_yy, u_xy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
-		f_res = self.env.f_res(x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy, u_xy)
-		f_err = f_res - target
-		return f_err
-
-	@tf.function
-	def compute_reduced_residual(self, x_tf, y_tf, t_tf, xi_tf, target):
-		u, u_x, u_y, u_t, u_xx, u_yy, u_xy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
-		f_res = self.env.f_reduced_res(x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy, u_xy)
+		u, u_x, u_y, u_t, u_xx, u_yy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
+		f_res = self.env.f_res(x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy)
 		f_err = f_res - target
 		return f_err
 
 	@tf.function 
 	def compute_neumann(self, x_tf, y_tf, t_tf, xi_tf, target):
-		u, u_x, u_y, u_t, u_xx, u_yy, u_xy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
+		u, u_x, u_y, u_t, u_xx, u_yy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
 		ub_n_p = self.env.neumann_bc(x_tf, y_tf, t_tf, xi_tf, u_x, u_y)
 		err = ub_n_p - target
 		return err
@@ -204,12 +196,6 @@ class NN_tf:
 				if save_toggle:
 					self.loss_init_list.append(loss_0.numpy())
 
-			elif name_i == "Reduced":
-				f_res = self.compute_reduced_residual(x_tf, y_tf, t_tf, xi_tf, target)
-				f_u = f_res*np.sqrt(weight/N)
-				loss_f = tf.math.reduce_sum(f_u**2)/2
-				loss_val = loss_val + loss_f
-
 		if self.regular_alphas != 0:
 			weights = tf.concat(self.weights, axis = -1)
 			biases = tf.concat(self.biases, axis = -1)
@@ -234,22 +220,6 @@ class NN_tf:
 	def construct_Jacobian_residual(self, x_tf, y_tf, t_tf, xi_tf, target, N, weight):
 		with tf.GradientTape(persistent = True) as tape:
 			f_res = self.compute_residual(x_tf, y_tf, t_tf, xi_tf, target)
-			err = (f_res)*tf.math.sqrt(weight/N)
-			err = tf.reshape(err, [tf.reduce_prod(tf.shape(err)),1])
-		weights_jacobians = tape.jacobian(err, self.weights)
-		biases_jacobians = tape.jacobian(err, self.biases)
-		if biases_jacobians[-1] is None:
-			biases_jacobians[-1] = tf.zeros([tf.shape(biases_jacobians[0])[0], \
-				self.output_size, 1, self.output_size])
-		jacobs_tol_W = tf.squeeze(tf.concat(weights_jacobians, axis = -1))
-		jacobs_tol_b = tf.squeeze(tf.concat(biases_jacobians, axis = -1))
-		del tape
-		return jacobs_tol_W, jacobs_tol_b, err
-
-	@tf.function
-	def construct_Jacobian_reduced_residual(self, x_tf, y_tf, t_tf, xi_tf, target, N, weight):
-		with tf.GradientTape(persistent = True) as tape:
-			f_res = self.compute_reduced_residual(x_tf, y_tf, t_tf, xi_tf, target)
 			err = (f_res)*tf.math.sqrt(weight/N)
 			err = tf.reshape(err, [tf.reduce_prod(tf.shape(err)),1])
 		weights_jacobians = tape.jacobian(err, self.weights)

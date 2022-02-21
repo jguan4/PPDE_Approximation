@@ -44,11 +44,14 @@ def construct_tol_gradient(net, samples_list, batch_lim):
 			y_i = sample_i["y_tf"]
 			t_i = sample_i["t_tf"]
 			xi_i = sample_i["xi_tf"]
+			w1_i = sample_i["w1_tf"]
+			w2_i = sample_i["w2_tf"]
+
 			output_i = sample_i["target"]
 			N = sample_i["N"]
 			weight = sample_i["weight"]
 	
-			dicti = {'x_tf':x_i, 'y_tf':y_i, 't_tf':t_i, 'xi_tf':xi_i, 'target':output_i, 'N':N, 'type':Ntr_name_i, 'weight':weight}
+			dicti = {'x_tf':x_i, 'y_tf':y_i, 't_tf':t_i, 'xi_tf':xi_i, 'w1_tf':w1_i, 'w2_tf':w2_i, 'target':output_i, 'N':N, 'type':Ntr_name_i, 'weight':weight}
 			samplelisti = [dicti]
 
 			loss_val, grads_tol_W, grads_tol_b = net.construct_Gradient(samplelisti)
@@ -62,6 +65,8 @@ def construct_tol_gradient(net, samples_list, batch_lim):
 			y_i = sample_i["y_tf"]
 			t_i = sample_i["t_tf"]
 			xi_i = sample_i["xi_tf"]
+			w1_i = sample_i["w1_tf"]
+			w2_i = sample_i["w2_tf"]
 			output_i = sample_i["target"]
 			N = sample_i["N"]
 			weight = sample_i["weight"]
@@ -72,15 +77,17 @@ def construct_tol_gradient(net, samples_list, batch_lim):
 			for j in range(looptimes):
 				start_ind = j*batch_lim
 				end_ind = tf.dtypes.cast(tf.math.minimum(N_int, (j+1)*batch_lim), tf.int32)
-				target = output_i[start_ind:end_ind, 0:1]
+				target = output_i[start_ind:end_ind, 0:2]
 				x_batch = x_i[start_ind:end_ind, 0:1]
 				y_batch = y_i[start_ind:end_ind, 0:1]
 				t_batch = t_i[start_ind:end_ind, 0:1]
 				xi_batch = xi_i[start_ind:end_ind, 0::]
+				w1_batch = w1_i[start_ind:end_ind, 0::]
+				w2_batch = w2_i[start_ind:end_ind, 0::]
 
 				# tempsize = tf.size(x_batch,out_type=tf.float32)
 				# dicti = {'x_tf':x_batch, 'y_tf':y_batch, 't_tf':t_batch, 'xi_tf':xi_batch, 'target':target, 'N':tempsize, 'type':Ntr_name_i, 'weight':weight}
-				dicti = {'x_tf':x_batch, 'y_tf':y_batch, 't_tf':t_batch, 'xi_tf':xi_batch, 'target':target, 'N':N, 'type':Ntr_name_i, 'weight':weight}
+				dicti = {'x_tf':x_batch, 'y_tf':y_batch, 't_tf':t_batch, 'xi_tf':xi_batch, 'w1_tf':w1_batch, 'w2_tf':w2_batch, 'target':target, 'N':N, 'type':Ntr_name_i, 'weight':weight}
 				samplelisti = [dicti]
 
 				loss_val, grads_tol_W, grads_tol_b = net.construct_Gradient(samplelisti)
@@ -116,18 +123,20 @@ def construct_tol_Jacobian(net, samples_list, batch_lim):
 			y_i = sample_i["y_tf"]
 			t_i = sample_i["t_tf"]
 			xi_i = sample_i["xi_tf"]
+			w1_i = sample_i["w1_tf"]
+			w2_i = sample_i["w2_tf"]
 			output_i = sample_i["target"]
 			N = sample_i["N"]
 			weight = sample_i["weight"]
 	
 			if Ntr_name_i == "Res":
-				jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_residual(x_i, y_i, t_i, xi_i, output_i, N, weight)
+				jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_residual(x_i, y_i, t_i, xi_i, w1_i, w2_i, output_i, N, weight)
 			elif Ntr_name_i == "B_N":
-				jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_neumann(x_i, y_i, t_i, xi_i, output_i, N, weight)
+				jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_neumann(x_i, y_i, t_i, xi_i, w1_i, w2_i, output_i, N, weight)
 			elif Ntr_name_i == "Init" or Ntr_name_i == "B_D":
-				jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_solution(x_i, y_i, t_i, xi_i, output_i, N, weight)
-			elif Ntr_name_i == "Reduced":
-				jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_reduced_residual(x_i, y_i, t_i, xi_i, output_i, N, weight)
+				jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_solution(x_i, y_i, t_i, xi_i, w1_i, w2_i, output_i, N, weight)
+			elif Ntr_name_i == "Div":
+				jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_div(x_i, y_i, t_i, xi_i, w1_i, w2_i, output_i, N, weight)
 
 			JJ_W1, JJ_b1, Je_W1, Je_b1 = compute_JJ(jacobs_tol_W, jacobs_tol_b, err_batch)
 			JJ_W = JJ_W + JJ_W1
@@ -140,6 +149,8 @@ def construct_tol_Jacobian(net, samples_list, batch_lim):
 			y_i = sample_i["y_tf"]
 			t_i = sample_i["t_tf"]
 			xi_i = sample_i["xi_tf"]
+			w1_i = sample_i["w1_tf"]
+			w2_i = sample_i["w2_tf"]
 			output_i = sample_i["target"]
 			N = sample_i["N"]
 			weight = sample_i["weight"]
@@ -150,20 +161,22 @@ def construct_tol_Jacobian(net, samples_list, batch_lim):
 			for j in range(looptimes):
 				start_ind = j*batch_lim
 				end_ind = tf.dtypes.cast(tf.math.minimum(N_int, (j+1)*batch_lim), tf.int32)
-				target = output_i[start_ind:end_ind, 0:1]
+				target = output_i[start_ind:end_ind, 0:2]
 				x_batch = x_i[start_ind:end_ind, 0:1]
 				y_batch = y_i[start_ind:end_ind, 0:1]
 				t_batch = t_i[start_ind:end_ind, 0:1]
 				xi_batch = xi_i[start_ind:end_ind, 0::]
+				w1_batch = w1_i[start_ind:end_ind, 0::]
+				w2_batch = w2_i[start_ind:end_ind, 0::]
 
 				if Ntr_name_i == "Res":
-					jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_residual(x_batch, y_batch, t_batch, xi_batch, target, N, weight)
+					jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_residual(x_batch, y_batch, t_batch, xi_batch, w1_batch, w2_batch, target, N, weight)
 				elif Ntr_name_i == "B_N":
-					jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_neumann(x_batch, y_batch, t_batch, xi_batch, target, N, weight)
+					jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_neumann(x_batch, y_batch, t_batch, xi_batch, w1_batch, w2_batch, target, N, weight)
 				elif Ntr_name_i == "Init" or Ntr_name_i == "B_D":
-					jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_solution(x_batch, y_batch, t_batch, xi_batch, target, N, weight)
-				elif Ntr_name_i == "Reduced":
-					jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_reduced_residual(x_batch, y_batch, t_batch, xi_batch, target, N, weight)
+					jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_solution(x_batch, y_batch, t_batch, xi_batch, w1_batch, w2_batch, target, N, weight)
+				elif Ntr_name_i == "Div":
+					jacobs_tol_W, jacobs_tol_b, err_batch = net.construct_Jacobian_div(x_batch, y_batch, t_batch, xi_batch, w1_batch, w2_batch, target, N, weight)
 
 				JJ_W1, JJ_b1, Je_W1, Je_b1 = compute_JJ(jacobs_tol_W, jacobs_tol_b, err_batch)
 				JJ_W = JJ_W + JJ_W1
@@ -182,7 +195,7 @@ def compute_JJ(jacobs_tol_W, jacobs_tol_b, err_batch):
 	Je_b = tf.matmul(jacobs_tol_b, err_batch, transpose_a = True)
 	return JJ_W, JJ_b, Je_W, Je_b
 
-def train_lm(net, samples_list, max_iter, tol, mu, beta, save_toggle, save_for_plot, path_weight = "./temp.npz", path_log = "./Log/", path_plot = "./temp.npz"):
+def train_lm_2du(net, samples_list, max_iter, tol, mu, beta, save_toggle, save_for_plot, path_weight = "./temp.npz", path_log = "./Log/", path_plot = "./temp.npz"):
 
 	epoch = 0
 	gradient = 1
@@ -327,7 +340,7 @@ def update_weights(net, samples_list ,mu, batch_lim):
 
 	loss_val1 = net.loss(samples_list, save_toggle=True)
 	loss_val_tf, grads_W_list, grads_b_list = construct_tol_gradient(net,samples_list,batch_lim*10)
-	
+
 	# loss_val_tf, grads_W_list, grads_b_list = net.construct_Gradient(samples_list)
 	
 	loss_val = loss_val1.numpy()

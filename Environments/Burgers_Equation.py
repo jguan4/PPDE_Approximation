@@ -353,7 +353,13 @@ class Burgers_Equation:
 		u_test_p = net.forward(x_tf, y_tf, t_tf, xi_tf)
 		if self.sampling_method == 0:
 			u_test_p = u_test_p.numpy()
+			# print(u_test_p)
+			# input()
+
 			self.V = np.load(self.path_env+"{2}_{1}{3}_V_{0}.npy".format(self.L, self.N_p_train, self.name,""))
+			reduced_sols = self.V.T@u_test
+			# print(reduced_sols.T-u_test_p)
+			# input()
 			u_test_p = u_test_p@self.V.T
 			u_test_p_grid = tf.constant(u_test_p, dtype = tf.float32)
 			u_test_p_grid = tf.reshape(u_test_p_grid,(self.N_p_test,self.Nt,self.N))

@@ -45,7 +45,11 @@ class CD_2D_13:
 			self.output_space_size  = 1
 			self.Ns = N_p_train
 			self.lb = np.array([-1.0, -1.0, 1e-4])
+			# self.lb = np.array([0.0, -1.0, 1e-4])
+			# self.lb = np.array([0.0, -1.0, 1e-2])
 			self.ub = np.array([1.0, 1.0, 1.0])
+			# self.ub = np.array([2e4, 1.0, 1.0])
+			# self.ub = np.array([2e2, 1.0, 1.0])
 			self.Nf = N_p_train[0]
 			self.Nb = N_p_train[1]
 			self.Nn = N_p_train[2]
@@ -100,10 +104,11 @@ class CD_2D_13:
 		self.inner = inner
 
 
-	def generate_para(self):
+	def generate_para(self,app_str = ""):
 		np.random.seed(10)
+		# sampling = LHS(xlimits=np.array([[-2,0]]))
 		sampling = LHS(xlimits=self.plimits)
-		filename = self.path_env+"CD_2D_{0}.npy".format(self.N_p_train)
+		filename = self.path_env+"CD_2D_{0}{1}.npy".format(self.N_p_train,app_str)
 		
 		# check if train parameters exist
 		if os.path.exists(filename):
@@ -113,35 +118,60 @@ class CD_2D_13:
 			self.mu_mat_train[0,:] = np.power(10,self.mu_mat_train[0,:])
 			np.save(filename,self.mu_mat_train)
 
-	def generate_para_test(self):
+	def generate_para_test(self,app_str = ""):
 		np.random.seed(10)
-		# sampling = LHS(xlimits=self.plimits)
-		sampling = LHS(xlimits=np.array([[-4,0]]))
+		sampling = LHS(xlimits=self.plimits)
+		# sampling = LHS(xlimits=np.array([[-2,-1]]))
 
 		# check if test parameters exist
-		if os.path.exists(self.path_env+"CD_2D_{0}.npy".format(self.N_p_test)):
-			self.mu_mat_test = np.load(self.path_env+"CD_2D_{0}.npy".format(self.N_p_test))
+		if os.path.exists(self.path_env+"CD_2D_{0}{1}.npy".format(self.N_p_test,app_str)):
+			self.mu_mat_test = np.load(self.path_env+"CD_2D_{0}{1}.npy".format(self.N_p_test,app_str))
 		else:
 			self.mu_mat_test = sampling(self.N_p_test).T
 			self.mu_mat_test[0,:] = np.power(10,self.mu_mat_test[0,:])
-			np.save(self.path_env+"CD_2D_{0}.npy".format(self.N_p_test),self.mu_mat_test)
+			np.save(self.path_env+"CD_2D_{0}{1}.npy".format(self.N_p_test,app_str),self.mu_mat_test)
+		if os.path.exists(self.path_env+"CD_2D_{0}{2}_{1}.mat".format(num,self.N,app_str)):
+			u = scipy.io.loadmat(self.path_env+"CD_2D_{0}{2}_{1}.mat".format(num,self.N,app_str))
+			u = np.array(u.get('us'))
+		else:
+			print("run matlab for {0} and {1} grid. L={2}.".format(num,self.N,self.L))
+			print("name:","CD_2D_{0}{2}_{1}.mat".format(num,self.N,app_str))
+			input()
+			u = scipy.io.loadmat(self.path_env+"CD_2D_{0}{2}_{1}.mat".format(num,self.N,app_str))
+			u = np.array(u.get('us'))
+		return u
 
-	def u_exact_train(self):
+	def u_exact_train(self,app_str = ""):
 		if self.sampling_method == 0:
-			for i in range(self.mu_mat_train.shape[1]):
-				p = self.mu_mat_train[:,i]
-				self.generate_one_sol(p)
+			self.u_samples = self.use_ifiss(self.N_p_train,app_str)
+			# for i in range(self.mu_mat_train.shape[1]):
+			# 	p = self.mu_mat_train[:,i]
+			# 	self.generate_one_sol(p)
 			return [self.mu_mat_train.T, self.u_samples]
 		elif self.sampling_method == 3:
 			return self.generate_RNN_samples()
 
-	def u_exact_test(self):
-		self.generate_para_test()
+	def use_ifiss(self,num,app_str=""):
+		if os.path.exists(self.path_env+"CD_2D_{0}{2}_{1}.mat".format(num,self.N,app_str)):
+			u = scipy.io.loadmat(self.path_env+"CD_2D_{0}{2}_{1}.mat".format(num,self.N,app_str))
+			u = np.array(u.get('us'))
+		else:
+			print("run matlab for {0} and {1} grid. L={2}.".format(num,self.N,self.L))
+			print("name:","CD_2D_{0}{2}_{1}.mat".format(num,self.N,app_str))
+			input()
+			u = scipy.io.loadmat(self.path_env+"CD_2D_{0}{2}_{1}.mat".format(num,self.N,app_str))
+			u = np.array(u.get('us'))
+		return u
+
+	def u_exact_test(self,app_str = ""):
+		app_str = "_SD_rand2"
+		self.generate_para_test(app_str)
 		if self.sampling_method == 0:
-			self.u_tests = np.array([])
-			for i in range(self.mu_mat_test.shape[1]):
-				p = self.mu_mat_test[:,i]
-				self.generate_one_sol(p, test = True)			
+			self.u_tests = self.use_ifiss(self.N_p_test,app_str)
+			# self.u_tests = np.array([])
+			# for i in range(self.mu_mat_test.shape[1]):
+			# 	p = self.mu_mat_test[:,i]
+			# 	self.generate_one_sol(p, test = True)			
 			return self.generate_POD_tests()
 		elif self.sampling_method == 1 or self.sampling_method == 2:
 			self.N0_tests = np.array([])
@@ -149,6 +179,7 @@ class CD_2D_13:
 			for i in range(self.mu_mat_test.shape[1]):
 				p = self.mu_mat_test[:,i]
 				self.generate_one_sol(p, test = True)
+			self.u0_tests = self.use_ifiss(self.mu_mat_test.shape[1],app_str)
 			return self.generate_PINN_tests()
 		elif self.sampling_method == 3:
 			self.u_tests = np.array([])
@@ -297,7 +328,8 @@ class CD_2D_13:
 
 	def generate_POD_samples(self, app_str):
 		self.generate_para(app_str)
-		p_train, u_train = self.u_exact_train()
+		self.app_str = app_str
+		p_train, u_train = self.u_exact_train(app_str)
 		if os.path.exists(self.path_env+"{2}_{1}{3}_V_{0}.npy".format(self.L, self.N_p_train, self.name,app_str)):
 			self.V = np.load(self.path_env+"{2}_{1}{3}_V_{0}.npy".format(self.L, self.N_p_train, self.name,app_str))
 		else:
@@ -329,7 +361,7 @@ class CD_2D_13:
 		return X0_dict, self.u_tests
 
 	def generate_PINN_samples(self, app_str = ""):
-
+		self.app_str = app_str
 		samples_list = []
 
 		filename = "CD_2D_13ver_{0}{1}.npz".format(self.Ns,app_str)
@@ -356,34 +388,611 @@ class CD_2D_13:
 			else:
 				self.Xr_tf = None
 		else:
-			np.random.seed(10)
 
-			# sampling_f = LHS(xlimits = np.array([[-1, 1], [-1, 1], [-4, 0]]))
-			sampling_f = LHS(xlimits = self.x_p_domain)
-			self.Xf = sampling_f(self.Nf)
-			self.Xf[:,2] = np.power(10, self.Xf[:,2])
-			target_f = np.zeros([self.Nf,1])
+			if app_str == "_SD_rand2_POD_100_33":
+				disN = 33
+				self.Xf = np.array([])
+				target_f = np.array([])
+				self.Xb_d = np.array([])
+				self.ub_d = np.array([])
+				epsfile = self.path_env+"CD_2D_{0}{1}.npy".format(100,"_SD_rand2")
+				self.mu_mat_train = np.load(epsfile).flatten()
+				x = np.linspace(self.domain[0,0],self.domain[0,1],num=disN)
+				y = np.linspace(self.domain[1,0],self.domain[1,1],num=disN)
 
-			sampling_b = LHS(xlimits = np.array([[-1, 1], [-4, 0]]))
-			Nb_side = self.Nb//4
-			x_p_b = sampling_b(Nb_side)
+				X, Y = np.meshgrid(x,y)
+				X_in = X[1:-1,1:-1]
+				Y_in = Y[1:-1,1:-1]
+				X_in_vec = np.reshape(X_in, [(disN-2)**2,1])
+				Y_in_vec = np.reshape(Y_in, [(disN-2)**2,1])
 
-			pb = x_p_b[:,[1]]
-			pb_10= np.power(10, pb)
-			xyb = x_p_b[:,[0]]
+				X_lb = X[1:-1,0].reshape([disN-2,1])
+				X_rb = X[1:-1,-1].reshape([disN-2,1])
+				X_tb = X[-1,::].reshape([disN,1])
+				X_db = X[0,::].reshape([disN,1])
+				Y_lb = Y[1:-1,0].reshape([disN-2,1])
+				Y_rb = Y[1:-1,-1].reshape([disN-2,1])
+				Y_tb = Y[-1,::].reshape([disN,1])
+				Y_db = Y[0,::].reshape([disN,1])
+				u_lb = np.zeros((disN-2,1))
+				u_rb = np.ones((disN-2,1))
+				u_tb = np.zeros((disN,1))
+				u_db = np.zeros((disN,1))
 
-			lb = np.concatenate((-np.ones((Nb_side,1)),xyb,pb_10),axis = 1)
-			ulb = np.zeros((Nb_side,1))
-			rb = np.concatenate((np.ones([Nb_side,1]),xyb,pb_10),axis = 1)
-			urb = np.ones((Nb_side,1))
-			tb = np.concatenate((xyb,np.ones((Nb_side,1)),pb_10),axis = 1)
-			utb = np.zeros((Nb_side,1))
-			db = np.concatenate((xyb,-np.ones((Nb_side,1)),pb_10),axis = 1)
-			udb = np.zeros((Nb_side,1))
+				xbd = np.vstack((X_lb,X_rb,X_tb,X_db))
+				ybd = np.vstack((Y_lb,Y_rb,Y_tb,Y_db))
+				ubd = np.vstack((u_lb,u_rb,u_tb,u_db))
+				xb_d = np.hstack((xbd,ybd))
+
+				for i in range(len(self.mu_mat_train)):
+					p = self.mu_mat_train[i]
+					pvec = np.ones([(disN-2)**2,1])*p
+					xf = np.hstack((X_in_vec,Y_in_vec,pvec))
+					self.Xf = np.vstack((self.Xf,xf)) if self.Xf.size else xf
+					target_f = np.vstack((target_f,np.zeros([(disN-2)**2,1]))) if target_f.size else np.zeros([(disN-2)**2,1])
+
+					pbdvec = np.ones([(disN-1)*4,1])*p
+					xb_d_block = np.hstack((xb_d,pbdvec))
+					self.Xb_d = np.vstack((self.Xb_d,xb_d_block)) if self.Xb_d.size else xb_d_block
+					self.ub_d = np.vstack((self.ub_d,ubd)) if self.ub_d.size else ubd
+
+			elif app_str == "_epsuniform100_polaruniform":
+				disN = 17
+				self.Xf = np.array([])
+				target_f = np.array([])
+				self.Xb_d = np.array([])
+				self.ub_d = np.array([])
+				
+				self.mu_mat_train = np.linspace(-4,0,100)
+				self.mu_mat_train = np.power(10,self.mu_mat_train)
+				# self.generate_para("_SD_-2to0")
+				x = np.linspace(self.domain[0,0],self.domain[0,1],num=disN)
+				y = np.linspace(self.domain[1,0],self.domain[1,1],num=disN)
+
+				X, Y = np.meshgrid(x,y)
+				# X_in = X[1:-1,1:-1]
+				# Y_in = Y[1:-1,1:-1]
+				# X_in_vec = np.reshape(X_in, [(disN-2)**2,1])
+				# Y_in_vec = np.reshape(Y_in, [(disN-2)**2,1])
+
+				thetas = np.linspace(0,2*np.pi,num=disN-2)
+				rlims = np.zeros((disN-2,))
+				for i in range(len(thetas)):
+					if thetas[i]<= np.pi/4:
+						rlims[i] = 1/np.cos(thetas[i])
+					elif thetas[i]>np.pi/4 and thetas[i]<= 3*np.pi/4:
+						rlims[i] = 1/np.sin(thetas[i])
+					elif thetas[i]>3*np.pi/4 and thetas[i]<= 5*np.pi/4:
+						rlims[i] = -1/np.cos(thetas[i])
+					elif thetas[i]>5*np.pi/4 and thetas[i]<= 7*np.pi/4:
+						rlims[i] = -1/np.sin(thetas[i])
+					elif thetas[i]>7*np.pi/4 and thetas[i]<= 2*np.pi:
+						rlims[i] = 1/np.cos(thetas[i])
+
+				X_in_vec = np.zeros(((disN-2)**2,1))
+				Y_in_vec = np.zeros(((disN-2)**2,1))
+
+				for j in range(disN-2):
+					rs = np.linspace(0,rlims[j],disN-1)
+					rs = rs[0:-1]
+					xcoords = rs*np.cos(thetas[j])
+					ycoords = rs*np.sin(thetas[j])
+					X_in_vec[(j)*(disN-2):(j+1)*(disN-2),0] = xcoords
+					Y_in_vec[(j)*(disN-2):(j+1)*(disN-2),0] = ycoords
+
+				# fig, ax = plt.subplots()
+				# ax.plot(X_in_vec,Y_in_vec, 'o')
+				# plt.show()
+
+				X_lb = X[1:-1,0].reshape([disN-2,1])
+				X_rb = X[1:-1,-1].reshape([disN-2,1])
+				X_tb = X[-1,::].reshape([disN,1])
+				X_db = X[0,::].reshape([disN,1])
+				Y_lb = Y[1:-1,0].reshape([disN-2,1])
+				Y_rb = Y[1:-1,-1].reshape([disN-2,1])
+				Y_tb = Y[-1,::].reshape([disN,1])
+				Y_db = Y[0,::].reshape([disN,1])
+				u_lb = np.zeros((disN-2,1))
+				u_rb = np.ones((disN-2,1))
+				u_tb = np.zeros((disN,1))
+				u_db = np.zeros((disN,1))
+
+				xbd = np.vstack((X_lb,X_rb,X_tb,X_db))
+				ybd = np.vstack((Y_lb,Y_rb,Y_tb,Y_db))
+				ubd = np.vstack((u_lb,u_rb,u_tb,u_db))
+				xb_d = np.hstack((xbd,ybd))
+
+				for i in range(len(self.mu_mat_train)):
+					p = self.mu_mat_train[i]
+					pvec = np.ones([(disN-2)**2,1])*p
+					xf = np.hstack((X_in_vec,Y_in_vec,pvec))
+					self.Xf = np.vstack((self.Xf,xf)) if self.Xf.size else xf
+					target_f = np.vstack((target_f,np.zeros([(disN-2)**2,1]))) if target_f.size else np.zeros([(disN-2)**2,1])
+
+					pbdvec = np.ones([(disN-1)*4,1])*p
+					xb_d_block = np.hstack((xb_d,pbdvec))
+					self.Xb_d = np.vstack((self.Xb_d,xb_d_block)) if self.Xb_d.size else xb_d_block
+					self.ub_d = np.vstack((self.ub_d,ubd)) if self.ub_d.size else ubd
+
+			elif app_str == "_epsuniform100_polardenseedge":
+				disN = 17
+				self.Xf = np.array([])
+				target_f = np.array([])
+				self.Xb_d = np.array([])
+				self.ub_d = np.array([])
+				
+				self.mu_mat_train = np.linspace(-4,0,100)
+				self.mu_mat_train = np.power(10,self.mu_mat_train)
+				# self.generate_para("_SD_-2to0")
+				x = np.linspace(self.domain[0,0],self.domain[0,1],num=disN)
+				y = np.linspace(self.domain[1,0],self.domain[1,1],num=disN)
+
+				X, Y = np.meshgrid(x,y)
+				# X_in = X[1:-1,1:-1]
+				# Y_in = Y[1:-1,1:-1]
+				# X_in_vec = np.reshape(X_in, [(disN-2)**2,1])
+				# Y_in_vec = np.reshape(Y_in, [(disN-2)**2,1])
+
+				thetas = np.linspace(0,2*np.pi,num=disN-2)
+				rlims = np.zeros((disN-2,))
+				for i in range(len(thetas)):
+					if thetas[i]<= np.pi/4:
+						rlims[i] = 1/np.cos(thetas[i])
+					elif thetas[i]>np.pi/4 and thetas[i]<= 3*np.pi/4:
+						rlims[i] = 1/np.sin(thetas[i])
+					elif thetas[i]>3*np.pi/4 and thetas[i]<= 5*np.pi/4:
+						rlims[i] = -1/np.cos(thetas[i])
+					elif thetas[i]>5*np.pi/4 and thetas[i]<= 7*np.pi/4:
+						rlims[i] = -1/np.sin(thetas[i])
+					elif thetas[i]>7*np.pi/4 and thetas[i]<= 2*np.pi:
+						rlims[i] = 1/np.cos(thetas[i])
+
+				X_in_vec = np.zeros(((disN-2)**2,1))
+				Y_in_vec = np.zeros(((disN-2)**2,1))
+
+				for j in range(disN-2):
+					rs = np.sin(np.linspace(0,np.pi/2,disN))*rlims[j]
+					rs = rs[0:-2]
+					xcoords = rs*np.cos(thetas[j])
+					ycoords = rs*np.sin(thetas[j])
+					X_in_vec[(j)*(disN-2):(j+1)*(disN-2),0] = xcoords
+					Y_in_vec[(j)*(disN-2):(j+1)*(disN-2),0] = ycoords
+
+				# fig, ax = plt.subplots()
+				# ax.plot(X_in_vec,Y_in_vec, 'o')
+				# plt.show()
+
+				X_lb = X[1:-1,0].reshape([disN-2,1])
+				X_rb = X[1:-1,-1].reshape([disN-2,1])
+				X_tb = X[-1,::].reshape([disN,1])
+				X_db = X[0,::].reshape([disN,1])
+				Y_lb = Y[1:-1,0].reshape([disN-2,1])
+				Y_rb = Y[1:-1,-1].reshape([disN-2,1])
+				Y_tb = Y[-1,::].reshape([disN,1])
+				Y_db = Y[0,::].reshape([disN,1])
+				u_lb = np.zeros((disN-2,1))
+				u_rb = np.ones((disN-2,1))
+				u_tb = np.zeros((disN,1))
+				u_db = np.zeros((disN,1))
+
+				xbd = np.vstack((X_lb,X_rb,X_tb,X_db))
+				ybd = np.vstack((Y_lb,Y_rb,Y_tb,Y_db))
+				ubd = np.vstack((u_lb,u_rb,u_tb,u_db))
+				xb_d = np.hstack((xbd,ybd))
+
+				for i in range(len(self.mu_mat_train)):
+					p = self.mu_mat_train[i]
+					pvec = np.ones([(disN-2)**2,1])*p
+					xf = np.hstack((X_in_vec,Y_in_vec,pvec))
+					self.Xf = np.vstack((self.Xf,xf)) if self.Xf.size else xf
+					target_f = np.vstack((target_f,np.zeros([(disN-2)**2,1]))) if target_f.size else np.zeros([(disN-2)**2,1])
+
+					pbdvec = np.ones([(disN-1)*4,1])*p
+					xb_d_block = np.hstack((xb_d,pbdvec))
+					self.Xb_d = np.vstack((self.Xb_d,xb_d_block)) if self.Xb_d.size else xb_d_block
+					self.ub_d = np.vstack((self.ub_d,ubd)) if self.ub_d.size else ubd
+
+			elif app_str == "_epsuniform100_polardensecenter":
+				disN = 17
+				self.Xf = np.array([])
+				target_f = np.array([])
+				self.Xb_d = np.array([])
+				self.ub_d = np.array([])
+				
+				self.mu_mat_train = np.linspace(-4,0,100)
+				self.mu_mat_train = np.power(10,self.mu_mat_train)
+				# self.generate_para("_SD_-2to0")
+				x = np.linspace(self.domain[0,0],self.domain[0,1],num=disN)
+				y = np.linspace(self.domain[1,0],self.domain[1,1],num=disN)
+
+				X, Y = np.meshgrid(x,y)
+				# X_in = X[1:-1,1:-1]
+				# Y_in = Y[1:-1,1:-1]
+				# X_in_vec = np.reshape(X_in, [(disN-2)**2,1])
+				# Y_in_vec = np.reshape(Y_in, [(disN-2)**2,1])
+
+				thetas = np.linspace(0,2*np.pi,num=disN-2)
+				rlims = np.zeros((disN-2,))
+				for i in range(len(thetas)):
+					if thetas[i]<= np.pi/4:
+						rlims[i] = 1/np.cos(thetas[i])
+					elif thetas[i]>np.pi/4 and thetas[i]<= 3*np.pi/4:
+						rlims[i] = 1/np.sin(thetas[i])
+					elif thetas[i]>3*np.pi/4 and thetas[i]<= 5*np.pi/4:
+						rlims[i] = -1/np.cos(thetas[i])
+					elif thetas[i]>5*np.pi/4 and thetas[i]<= 7*np.pi/4:
+						rlims[i] = -1/np.sin(thetas[i])
+					elif thetas[i]>7*np.pi/4 and thetas[i]<= 2*np.pi:
+						rlims[i] = 1/np.cos(thetas[i])
+
+				X_in_vec = np.zeros(((disN-2)**2,1))
+				Y_in_vec = np.zeros(((disN-2)**2,1))
+
+				for j in range(disN-2):
+					rs = (1-np.cos(np.linspace(0,np.pi/2,disN)))*rlims[j]
+					rs = rs[0:-2]
+					xcoords = rs*np.cos(thetas[j])
+					ycoords = rs*np.sin(thetas[j])
+					X_in_vec[(j)*(disN-2):(j+1)*(disN-2),0] = xcoords
+					Y_in_vec[(j)*(disN-2):(j+1)*(disN-2),0] = ycoords
+
+				# fig, ax = plt.subplots()
+				# ax.plot(X_in_vec,Y_in_vec, 'o')
+				# plt.show()
+
+				X_lb = X[1:-1,0].reshape([disN-2,1])
+				X_rb = X[1:-1,-1].reshape([disN-2,1])
+				X_tb = X[-1,::].reshape([disN,1])
+				X_db = X[0,::].reshape([disN,1])
+				Y_lb = Y[1:-1,0].reshape([disN-2,1])
+				Y_rb = Y[1:-1,-1].reshape([disN-2,1])
+				Y_tb = Y[-1,::].reshape([disN,1])
+				Y_db = Y[0,::].reshape([disN,1])
+				u_lb = np.zeros((disN-2,1))
+				u_rb = np.ones((disN-2,1))
+				u_tb = np.zeros((disN,1))
+				u_db = np.zeros((disN,1))
+
+				xbd = np.vstack((X_lb,X_rb,X_tb,X_db))
+				ybd = np.vstack((Y_lb,Y_rb,Y_tb,Y_db))
+				ubd = np.vstack((u_lb,u_rb,u_tb,u_db))
+				xb_d = np.hstack((xbd,ybd))
+
+				for i in range(len(self.mu_mat_train)):
+					p = self.mu_mat_train[i]
+					pvec = np.ones([(disN-2)**2,1])*p
+					xf = np.hstack((X_in_vec,Y_in_vec,pvec))
+					self.Xf = np.vstack((self.Xf,xf)) if self.Xf.size else xf
+					target_f = np.vstack((target_f,np.zeros([(disN-2)**2,1]))) if target_f.size else np.zeros([(disN-2)**2,1])
+
+					pbdvec = np.ones([(disN-1)*4,1])*p
+					xb_d_block = np.hstack((xb_d,pbdvec))
+					self.Xb_d = np.vstack((self.Xb_d,xb_d_block)) if self.Xb_d.size else xb_d_block
+					self.ub_d = np.vstack((self.ub_d,ubd)) if self.ub_d.size else ubd
+
+			elif app_str == "_SD_rand2_POD_100_17":
+				disN = 17
+				self.Xf = np.array([])
+				target_f = np.array([])
+				self.Xb_d = np.array([])
+				self.ub_d = np.array([])
+				epsfile = self.path_env+"CD_2D_{0}{1}.npy".format(100,"_SD_rand2")
+				self.mu_mat_train = np.load(epsfile).flatten()
+				# self.generate_para("_SD_-2to0")
+				x = np.linspace(self.domain[0,0],self.domain[0,1],num=disN)
+				y = np.linspace(self.domain[1,0],self.domain[1,1],num=disN)
+
+				X, Y = np.meshgrid(x,y)
+				X_in = X[1:-1,1:-1]
+				Y_in = Y[1:-1,1:-1]
+				X_in_vec = np.reshape(X_in, [(disN-2)**2,1])
+				Y_in_vec = np.reshape(Y_in, [(disN-2)**2,1])
+
+				X_lb = X[1:-1,0].reshape([disN-2,1])
+				X_rb = X[1:-1,-1].reshape([disN-2,1])
+				X_tb = X[-1,::].reshape([disN,1])
+				X_db = X[0,::].reshape([disN,1])
+				Y_lb = Y[1:-1,0].reshape([disN-2,1])
+				Y_rb = Y[1:-1,-1].reshape([disN-2,1])
+				Y_tb = Y[-1,::].reshape([disN,1])
+				Y_db = Y[0,::].reshape([disN,1])
+				u_lb = np.zeros((disN-2,1))
+				u_rb = np.ones((disN-2,1))
+				u_tb = np.zeros((disN,1))
+				u_db = np.zeros((disN,1))
+
+				xbd = np.vstack((X_lb,X_rb,X_tb,X_db))
+				ybd = np.vstack((Y_lb,Y_rb,Y_tb,Y_db))
+				ubd = np.vstack((u_lb,u_rb,u_tb,u_db))
+				xb_d = np.hstack((xbd,ybd))
+
+				for i in range(len(self.mu_mat_train)):
+					p = self.mu_mat_train[i]
+					pvec = np.ones([(disN-2)**2,1])*p
+					xf = np.hstack((X_in_vec,Y_in_vec,pvec))
+					self.Xf = np.vstack((self.Xf,xf)) if self.Xf.size else xf
+					target_f = np.vstack((target_f,np.zeros([(disN-2)**2,1]))) if target_f.size else np.zeros([(disN-2)**2,1])
+
+					pbdvec = np.ones([(disN-1)*4,1])*p
+					xb_d_block = np.hstack((xb_d,pbdvec))
+					self.Xb_d = np.vstack((self.Xb_d,xb_d_block)) if self.Xb_d.size else xb_d_block
+					self.ub_d = np.vstack((self.ub_d,ubd)) if self.ub_d.size else ubd
+
+			elif app_str == "_SD_rand2_POD_100_17_polaruniform":
+				disN = 17
+				self.Xf = np.array([])
+				target_f = np.array([])
+				self.Xb_d = np.array([])
+				self.ub_d = np.array([])
+				epsfile = self.path_env+"CD_2D_{0}{1}.npy".format(100,"_SD_rand2")
+				self.mu_mat_train = np.load(epsfile).flatten()
+				# self.generate_para("_SD_-2to0")
+				x = np.linspace(self.domain[0,0],self.domain[0,1],num=disN)
+				y = np.linspace(self.domain[1,0],self.domain[1,1],num=disN)
+
+				X, Y = np.meshgrid(x,y)
+				# X_in = X[1:-1,1:-1]
+				# Y_in = Y[1:-1,1:-1]
+				# X_in_vec = np.reshape(X_in, [(disN-2)**2,1])
+				# Y_in_vec = np.reshape(Y_in, [(disN-2)**2,1])
+
+				thetas = np.linspace(0,2*np.pi,num=disN-2)
+				rlims = np.zeros((disN-2,))
+				for i in range(len(thetas)):
+					if thetas[i]<= np.pi/4:
+						rlims[i] = 1/np.cos(thetas[i])
+					elif thetas[i]>np.pi/4 and thetas[i]<= 3*np.pi/4:
+						rlims[i] = 1/np.sin(thetas[i])
+					elif thetas[i]>3*np.pi/4 and thetas[i]<= 5*np.pi/4:
+						rlims[i] = -1/np.cos(thetas[i])
+					elif thetas[i]>5*np.pi/4 and thetas[i]<= 7*np.pi/4:
+						rlims[i] = -1/np.sin(thetas[i])
+					elif thetas[i]>7*np.pi/4 and thetas[i]<= 2*np.pi:
+						rlims[i] = 1/np.cos(thetas[i])
+
+				X_in_vec = np.zeros(((disN-2)**2,1))
+				Y_in_vec = np.zeros(((disN-2)**2,1))
+
+				for j in range(disN-2):
+					rs = np.linspace(0,rlims[j],disN-1)
+					rs = rs[0:-1]
+					xcoords = rs*np.cos(thetas[j])
+					ycoords = rs*np.sin(thetas[j])
+					X_in_vec[(j)*(disN-2):(j+1)*(disN-2),0] = xcoords
+					Y_in_vec[(j)*(disN-2):(j+1)*(disN-2),0] = ycoords
+
+				X_lb = X[1:-1,0].reshape([disN-2,1])
+				X_rb = X[1:-1,-1].reshape([disN-2,1])
+				X_tb = X[-1,::].reshape([disN,1])
+				X_db = X[0,::].reshape([disN,1])
+				Y_lb = Y[1:-1,0].reshape([disN-2,1])
+				Y_rb = Y[1:-1,-1].reshape([disN-2,1])
+				Y_tb = Y[-1,::].reshape([disN,1])
+				Y_db = Y[0,::].reshape([disN,1])
+				u_lb = np.zeros((disN-2,1))
+				u_rb = np.ones((disN-2,1))
+				u_tb = np.zeros((disN,1))
+				u_db = np.zeros((disN,1))
+
+				xbd = np.vstack((X_lb,X_rb,X_tb,X_db))
+				ybd = np.vstack((Y_lb,Y_rb,Y_tb,Y_db))
+				ubd = np.vstack((u_lb,u_rb,u_tb,u_db))
+				xb_d = np.hstack((xbd,ybd))
+
+				for i in range(len(self.mu_mat_train)):
+					p = self.mu_mat_train[i]
+					pvec = np.ones([(disN-2)**2,1])*p
+					xf = np.hstack((X_in_vec,Y_in_vec,pvec))
+					self.Xf = np.vstack((self.Xf,xf)) if self.Xf.size else xf
+					target_f = np.vstack((target_f,np.zeros([(disN-2)**2,1]))) if target_f.size else np.zeros([(disN-2)**2,1])
+
+					pbdvec = np.ones([(disN-1)*4,1])*p
+					xb_d_block = np.hstack((xb_d,pbdvec))
+					self.Xb_d = np.vstack((self.Xb_d,xb_d_block)) if self.Xb_d.size else xb_d_block
+					self.ub_d = np.vstack((self.ub_d,ubd)) if self.ub_d.size else ubd
+
+			elif app_str == "_SD_rand2_POD_100_17_incircle":
+				disN = 17
+				self.Xf = np.array([])
+				target_f = np.array([])
+				self.Xb_d = np.array([])
+				self.ub_d = np.array([])
+				epsfile = self.path_env+"CD_2D_{0}{1}.npy".format(100,"_SD_rand2")
+				self.mu_mat_train = np.load(epsfile).flatten()
+				# self.generate_para("_SD_-2to0")
+				x = np.linspace(self.domain[0,0],self.domain[0,1],num=disN)
+				y = np.linspace(self.domain[1,0],self.domain[1,1],num=disN)
+
+				X, Y = np.meshgrid(x,y)
+				# X_in = X[1:-1,1:-1]
+				# Y_in = Y[1:-1,1:-1]
+				# X_in_vec = np.reshape(X_in, [(disN-2)**2,1])
+				# Y_in_vec = np.reshape(Y_in, [(disN-2)**2,1])
+
+				sampling_f = LHS(xlimits = np.array([[0,1],[0,2*np.pi]]))
+				xfincircle = sampling_f((disN-2)**2)
+				X_in_vec = xfincircle[:,[0]]*np.cos(xfincircle[:,[1]])
+				Y_in_vec = xfincircle[:,[0]]*np.sin(xfincircle[:,[1]])
 
 
-			self.Xb_d = np.concatenate((lb,rb,tb,db),axis = 0)
-			self.ub_d = np.concatenate((ulb,urb,utb,udb),axis = 0)
+				X_lb = X[1:-1,0].reshape([disN-2,1])
+				X_rb = X[1:-1,-1].reshape([disN-2,1])
+				X_tb = X[-1,::].reshape([disN,1])
+				X_db = X[0,::].reshape([disN,1])
+				Y_lb = Y[1:-1,0].reshape([disN-2,1])
+				Y_rb = Y[1:-1,-1].reshape([disN-2,1])
+				Y_tb = Y[-1,::].reshape([disN,1])
+				Y_db = Y[0,::].reshape([disN,1])
+				u_lb = np.zeros((disN-2,1))
+				u_rb = np.ones((disN-2,1))
+				u_tb = np.zeros((disN,1))
+				u_db = np.zeros((disN,1))
+
+				xbd = np.vstack((X_lb,X_rb,X_tb,X_db))
+				ybd = np.vstack((Y_lb,Y_rb,Y_tb,Y_db))
+				ubd = np.vstack((u_lb,u_rb,u_tb,u_db))
+				xb_d = np.hstack((xbd,ybd))
+
+				for i in range(len(self.mu_mat_train)):
+					p = self.mu_mat_train[i]
+					pvec = np.ones([(disN-2)**2,1])*p
+					xf = np.hstack((X_in_vec,Y_in_vec,pvec))
+					self.Xf = np.vstack((self.Xf,xf)) if self.Xf.size else xf
+					target_f = np.vstack((target_f,np.zeros([(disN-2)**2,1]))) if target_f.size else np.zeros([(disN-2)**2,1])
+
+					pbdvec = np.ones([(disN-1)*4,1])*p
+					xb_d_block = np.hstack((xb_d,pbdvec))
+					self.Xb_d = np.vstack((self.Xb_d,xb_d_block)) if self.Xb_d.size else xb_d_block
+					self.ub_d = np.vstack((self.ub_d,ubd)) if self.ub_d.size else ubd
+
+			elif app_str == "_SD_rand2_POD_100_17_sol":
+				disN = 17
+				self.Xf = np.array([])
+				target_f = np.array([])
+				self.Xb_d = np.array([])
+				self.ub_d = np.array([])
+				X0N = np.array([])
+				target_0N = np.array([])
+				epsfile = self.path_env+"CD_2D_{0}{1}.npy".format(100,"_SD_rand2")
+				u_sols = self.use_ifiss(100,app_str="_SD_rand2")
+
+				self.mu_mat_train = np.load(epsfile).flatten()
+				# self.generate_para("_SD_-2to0")
+				x = np.linspace(self.domain[0,0],self.domain[0,1],num=disN)
+				y = np.linspace(self.domain[1,0],self.domain[1,1],num=disN)
+
+				X, Y = np.meshgrid(x,y)
+				X_in = X[1:-1,1:-1]
+				Y_in = Y[1:-1,1:-1]
+				X_in_vec = np.reshape(X_in, [(disN-2)**2,1])
+				Y_in_vec = np.reshape(Y_in, [(disN-2)**2,1])
+
+				xN = np.linspace(self.domain[0,0],self.domain[0,1],num=self.N)
+				yN = np.linspace(self.domain[1,0],self.domain[1,1],num=self.N)
+				XN, YN = np.meshgrid(xN,yN)
+				XN_vec = np.reshape(XN, [self.N**2,1])
+				YN_vec = np.reshape(YN, [self.N**2,1])
+
+				X_lb = X[1:-1,0].reshape([disN-2,1])
+				X_rb = X[1:-1,-1].reshape([disN-2,1])
+				X_tb = X[-1,::].reshape([disN,1])
+				X_db = X[0,::].reshape([disN,1])
+				Y_lb = Y[1:-1,0].reshape([disN-2,1])
+				Y_rb = Y[1:-1,-1].reshape([disN-2,1])
+				Y_tb = Y[-1,::].reshape([disN,1])
+				Y_db = Y[0,::].reshape([disN,1])
+				u_lb = np.zeros((disN-2,1))
+				u_rb = np.ones((disN-2,1))
+				u_tb = np.zeros((disN,1))
+				u_db = np.zeros((disN,1))
+
+				xbd = np.vstack((X_lb,X_rb,X_tb,X_db))
+				ybd = np.vstack((Y_lb,Y_rb,Y_tb,Y_db))
+				ubd = np.vstack((u_lb,u_rb,u_tb,u_db))
+				xb_d = np.hstack((xbd,ybd))
+
+				for i in range(len(self.mu_mat_train)):
+					p = self.mu_mat_train[i]
+					pvec = np.ones([(disN-2)**2,1])*p
+					xf = np.hstack((X_in_vec,Y_in_vec,pvec))
+					self.Xf = np.vstack((self.Xf,xf)) if self.Xf.size else xf
+					target_f = np.vstack((target_f,np.zeros([(disN-2)**2,1]))) if target_f.size else np.zeros([(disN-2)**2,1])
+
+					pbdvec = np.ones([(disN-1)*4,1])*p
+					xb_d_block = np.hstack((xb_d,pbdvec))
+					self.Xb_d = np.vstack((self.Xb_d,xb_d_block)) if self.Xb_d.size else xb_d_block
+					self.ub_d = np.vstack((self.ub_d,ubd)) if self.ub_d.size else ubd
+
+					pNvec = np.ones([(self.N)**2,1])*p
+					x0 = np.hstack((XN_vec,YN_vec,pNvec))
+					X0N = np.vstack((X0N,x0)) if X0N.size else x0
+					target_0N = np.vstack((target_0N,u_sols[:,[i]])) if target_0N.size else u_sols[:,[i]]
+
+				N_sel = np.random.choice(self.N**2*100,self.N0)
+				self.X0 = X0N[N_sel,:]
+				self.u0 = target_0N[N_sel,:]
+
+			elif app_str == "_SD_rand2_POD_100_17_-2to0":
+				disN = 17
+				self.Xf = np.array([])
+				target_f = np.array([])
+				self.Xb_d = np.array([])
+				self.ub_d = np.array([])
+				# epsfile = self.path_env+"CD_2D_{0}{1}.npy".format(100,"_SD_rand2")
+				# self.mu_mat_train = np.load(epsfile).flatten()
+				self.N_p_train = 100
+				self.generate_para("_SD_-2to0")
+				self.mu_mat_train = self.mu_mat_train.flatten()
+
+				x = np.linspace(self.domain[0,0],self.domain[0,1],num=disN)
+				y = np.linspace(self.domain[1,0],self.domain[1,1],num=disN)
+
+				X, Y = np.meshgrid(x,y)
+				X_in = X[1:-1,1:-1]
+				Y_in = Y[1:-1,1:-1]
+				X_in_vec = np.reshape(X_in, [(disN-2)**2,1])
+				Y_in_vec = np.reshape(Y_in, [(disN-2)**2,1])
+
+				X_lb = X[1:-1,0].reshape([disN-2,1])
+				X_rb = X[1:-1,-1].reshape([disN-2,1])
+				X_tb = X[-1,::].reshape([disN,1])
+				X_db = X[0,::].reshape([disN,1])
+				Y_lb = Y[1:-1,0].reshape([disN-2,1])
+				Y_rb = Y[1:-1,-1].reshape([disN-2,1])
+				Y_tb = Y[-1,::].reshape([disN,1])
+				Y_db = Y[0,::].reshape([disN,1])
+				u_lb = np.zeros((disN-2,1))
+				u_rb = np.ones((disN-2,1))
+				u_tb = np.zeros((disN,1))
+				u_db = np.zeros((disN,1))
+
+				xbd = np.vstack((X_lb,X_rb,X_tb,X_db))
+				ybd = np.vstack((Y_lb,Y_rb,Y_tb,Y_db))
+				ubd = np.vstack((u_lb,u_rb,u_tb,u_db))
+				xb_d = np.hstack((xbd,ybd))
+
+				for i in range(len(self.mu_mat_train)):
+					p = self.mu_mat_train[i]
+					pvec = np.ones([(disN-2)**2,1])*p
+					xf = np.hstack((X_in_vec,Y_in_vec,pvec))
+					self.Xf = np.vstack((self.Xf,xf)) if self.Xf.size else xf
+					target_f = np.vstack((target_f,np.zeros([(disN-2)**2,1]))) if target_f.size else np.zeros([(disN-2)**2,1])
+
+					pbdvec = np.ones([(disN-1)*4,1])*p
+					xb_d_block = np.hstack((xb_d,pbdvec))
+					self.Xb_d = np.vstack((self.Xb_d,xb_d_block)) if self.Xb_d.size else xb_d_block
+					self.ub_d = np.vstack((self.ub_d,ubd)) if self.ub_d.size else ubd
+
+
+			else:
+				np.random.seed(10)
+
+				# sampling_f = LHS(xlimits = np.array([[-1, 1], [-1, 1], [-4, 0]]))
+				sampling_f = LHS(xlimits = self.x_p_domain)
+				self.Xf = sampling_f(self.Nf)
+				self.Xf[:,2] = np.power(10, self.Xf[:,2])
+				target_f = np.zeros([self.Nf,1])
+
+				sampling_b = LHS(xlimits = np.array([[-1, 1], [-4, 0]]))
+				Nb_side = self.Nb//4
+				x_p_b = sampling_b(Nb_side)
+
+				pb = x_p_b[:,[1]]
+				pb_10= np.power(10, pb)
+				xyb = x_p_b[:,[0]]
+
+				lb = np.concatenate((-np.ones((Nb_side,1)),xyb,pb_10),axis = 1)
+				ulb = np.zeros((Nb_side,1))
+				rb = np.concatenate((np.ones([Nb_side,1]),xyb,pb_10),axis = 1)
+				urb = np.ones((Nb_side,1))
+				tb = np.concatenate((xyb,np.ones((Nb_side,1)),pb_10),axis = 1)
+				utb = np.zeros((Nb_side,1))
+				db = np.concatenate((xyb,-np.ones((Nb_side,1)),pb_10),axis = 1)
+				udb = np.zeros((Nb_side,1))
+
+
+				self.Xb_d = np.concatenate((lb,rb,tb,db),axis = 0)
+				self.ub_d = np.concatenate((ulb,urb,utb,udb),axis = 0)
 
 			if self.Nr>0:
 				sampling_r = LHS(xlimits = self.x_p_domain)
@@ -394,46 +1003,46 @@ class CD_2D_13:
 				self.Xr = None
 
 			if self.N0>0:
-				sampling_0 = LHS(xlimits = self.x_p_domain)
-				x = sampling_0(self.N0)
-				x[:,2] = np.power(10, x[:,2])
+				# sampling_0 = LHS(xlimits = self.x_p_domain)
+				# x = sampling_0(self.N0)
+				# x[:,2] = np.power(10, x[:,2])
 
-				str_arr = app_str.split("_")
-				if len(str_arr)==3:
-					setting_str = str_arr[1]
-					setting_para_str = str_arr[2]
-					setting_para_str = setting_para_str.replace("p",".")
-					setting = int(setting_str)
-					setting_para = float(setting_para_str)
-				else:
-					setting = 0
-				# setting 1
-				if setting == 1:
-					x[:,0] = x[:,1]*x[:,0]+1-x[:,1]
-				# setting 2
-				elif setting == 2:
-					x[:,0] = setting_para*x[:,1]*x[:,0]+1-setting_para*x[:,1]
-					x[:,0] = np.maximum(0.001*np.ones(np.shape(x[:,0])),x[:,0])
-				# setting 3
-				elif setting == 3:
-					percent = setting_para/100
-					in_corner_int = int(percent*self.N0)
-					out_corner_int = self.N0-in_corner_int
-					N0_sel = np.random.choice(self.N0,in_corner_int, replace=False)
-					N0_sel_diff = np.array([i for i in range(self.N0) if (i not in N0_sel)])
-					N0_sel = N0_sel.reshape([in_corner_int,1])
-					N0_sel_diff = N0_sel_diff.reshape([out_corner_int,1])
-					x[N0_sel,0] = x[N0_sel,1]*x[N0_sel,0]+1-x[N0_sel,1]
-					x[N0_sel_diff,0] = (1-x[N0_sel_diff,1])*x[N0_sel_diff,0]
+				# str_arr = app_str.split("_")
+				# if len(str_arr)==3:
+				# 	setting_str = str_arr[1]
+				# 	setting_para_str = str_arr[2]
+				# 	setting_para_str = setting_para_str.replace("p",".")
+				# 	setting = int(setting_str)
+				# 	setting_para = float(setting_para_str)
+				# else:
+				# 	setting = 0
+				# # setting 1
+				# if setting == 1:
+				# 	x[:,0] = x[:,1]*x[:,0]+1-x[:,1]
+				# # setting 2
+				# elif setting == 2:
+				# 	x[:,0] = setting_para*x[:,1]*x[:,0]+1-setting_para*x[:,1]
+				# 	x[:,0] = np.maximum(0.001*np.ones(np.shape(x[:,0])),x[:,0])
+				# # setting 3
+				# elif setting == 3:
+				# 	percent = setting_para/100
+				# 	in_corner_int = int(percent*self.N0)
+				# 	out_corner_int = self.N0-in_corner_int
+				# 	N0_sel = np.random.choice(self.N0,in_corner_int, replace=False)
+				# 	N0_sel_diff = np.array([i for i in range(self.N0) if (i not in N0_sel)])
+				# 	N0_sel = N0_sel.reshape([in_corner_int,1])
+				# 	N0_sel_diff = N0_sel_diff.reshape([out_corner_int,1])
+				# 	x[N0_sel,0] = x[N0_sel,1]*x[N0_sel,0]+1-x[N0_sel,1]
+				# 	x[N0_sel_diff,0] = (1-x[N0_sel_diff,1])*x[N0_sel_diff,0]
 
-				# self.X0 = np.concatenate((x,1e-4*np.ones((self.N0,1))),axis = 1)
-				self.X0 = x
-				if app_str == "_reduced":
-					leftinds = self.X0[:,1]+np.sqrt(3)*self.X0[:,0]<-1
-					self.u0 = np.ones((self.N0,1))
-					self.u0[leftinds] = 0
-				else:
-					self.u0 = self.u_exact(self.X0)
+				# # self.X0 = np.concatenate((x,1e-4*np.ones((self.N0,1))),axis = 1)
+				# self.X0 = x
+				# if app_str == "_reduced":
+				# 	leftinds = self.X0[:,1]+np.sqrt(3)*self.X0[:,0]<-1
+				# 	self.u0 = np.ones((self.N0,1))
+				# 	self.u0[leftinds] = 0
+				# else:
+				# 	self.u0 = self.u_exact(self.X0)
 				np.savez(self.path_env+"{0}".format(filename), Xf = self.Xf, Xb_d = self.Xb_d, ub_d = self.ub_d, X0 = self.X0, u0 = self.u0, Xr = self.Xr)
 			else:
 				np.savez(self.path_env+"{0}".format(filename), Xf = self.Xf, Xb_d = self.Xb_d, ub_d = self.ub_d, Xr = self.Xr)
@@ -462,10 +1071,10 @@ class CD_2D_13:
 
 		if self.N0>0:
 			#check number of samples in (1-xi,1) corner
-			xis = self.X0[:,[2]]
-			xs = self.X0[:,[0]]
-			inds_corner = [i for i in range(len(xs)) if xs[i]>=1-xis[i]]
-			print("Number of samples in the corners is {0} out of {1}.\n".format(len(inds_corner),self.N0))
+			# xis = self.X0[:,[2]]
+			# xs = self.X0[:,[0]]
+			# inds_corner = [i for i in range(len(xs)) if xs[i]>=1-xis[i]]
+			# print("Number of samples in the corners is {0} out of {1}.\n".format(len(inds_corner),self.N0))
 
 			# plot samples
 			# fig, ax = plt.subplots()
@@ -508,22 +1117,29 @@ class CD_2D_13:
 
 	@tf.function
 	def f_res(self, x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy, u_xy):
-		# f_u = -xi_tf*(u_xx+u_yy)+2*y_tf*(1-x_tf**2)*u_x-2*x_tf*(1-y_tf**2)*u_y
-		f_u = -xi_tf*(u_xx+u_yy)+2*y_tf*(1-x_tf**2)*u_x-2*x_tf*(1-y_tf**2)*u_y-0.1*((1-x_tf**2)*(1+y_tf**2)*(-4*x_tf)*u_x+(1-y_tf**2)*(1+x_tf**2)*(-4*y_tf)*u_y+(4*y_tf**2)*(1-x_tf**2)**2*u_xx+(4*x_tf**2)*(1-y_tf**2)**2*u_yy+(-8*x_tf*y_tf)*(1-x_tf**2)*(1-y_tf**2)*u_xy)
+		f_u = -xi_tf*(u_xx+u_yy)+2*y_tf*(1-x_tf**2)*u_x-2*x_tf*(1-y_tf**2)*u_y
+		# f_u = -xi_tf*(u_xx+u_yy)+2*y_tf*(1-x_tf**2)*u_x-2*x_tf*(1-y_tf**2)*u_y-0.1*((1-x_tf**2)*(1+y_tf**2)*(-4*x_tf)*u_x+(1-y_tf**2)*(1+x_tf**2)*(-4*y_tf)*u_y+(4*y_tf**2)*(1-x_tf**2)**2*u_xx+(4*x_tf**2)*(1-y_tf**2)**2*u_yy+(-8*x_tf*y_tf)*(1-x_tf**2)*(1-y_tf**2)*u_xy)
 		# f_u = (-u_xx*xi_tf+u_x-1)/xi_tf
 		return f_u
 
 	@tf.function
+	def lhs_res(self, x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy, u_xy):
+		f_u = -xi_tf*(u_xx+u_yy)+2*y_tf*(1-x_tf**2)*u_x-2*x_tf*(1-y_tf**2)*u_y
+		return f_u
+
+	@tf.function
 	def f_reduced_res(self, x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy, u_xy):
-		f_u = 2*y_tf*(1-x_tf**2)*u_x-2*x_tf*(1-y_tf**2)*u_y
+		f_u = -xi_tf*(u_xx+u_yy)+2*y_tf*(1-x_tf**2)*u_x-2*x_tf*(1-y_tf**2)*u_y
 		# f_u = (-u_xx*xi_tf+u_x-1)/xi_tf
 		return f_u
 
 	@tf.function
 	def neumann_bc(self, x_tf, y_tf, t_tf, xi_tf, u_x, u_y):
+		
 		return
 
 	def test_NN(self, net, record_path = None,save_name = None):
+		
 		if record_path is not None:
 			folderpath = record_path
 			record_path = record_path + "rel_errs2.csv"
@@ -531,29 +1147,48 @@ class CD_2D_13:
 				pass
 			else:
 				with open(record_path, mode='w') as record:
-					fields=['Problem','Net_struct','Net_setup','Sample','L','relative_err','save_name']
+					fields=['Problem','Net_struct','Net_setup','Sample','L','relative_err','save_name','Projection Error','Net Error', 'Error']
 					record_writer = csv.writer(record, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
 					record_writer.writerow(fields)
-		X0_dict, u_test = self.u_exact_test()
+
+		X0_dict, u_test = self.u_exact_test(self.app_str)
 		x_tf = X0_dict["x_tf"]
 		y_tf = X0_dict["y_tf"]
 		t_tf = X0_dict["t_tf"]
 		xi_tf = X0_dict["xi_tf"]
-		target_f = tf.zeros([self.N*self.N*self.N_p_test,1])
+		
 		if self.sampling_method == 3:
 			net.h_init = tf.constant(self.h_init,dtype = tf.float32)
 		u_test_p = net.forward(x_tf, y_tf, t_tf, xi_tf)
-		f_res = net.compute_residual(x_tf, y_tf, t_tf, xi_tf, target_f)
 		if self.sampling_method == 0:
 			u_test_p = u_test_p.numpy()
-			self.V = np.load(self.path_env+"V_{}.npy".format(self.L))
+			self.V = np.load(self.path_env+"{2}_{1}{3}_V_{0}.npy".format(self.L, self.N_p_train, self.name, self.app_str))
+			
+			reduced_sols = self.V.T@u_test
+
+			reduced_err_vec = np.linalg.norm(reduced_sols.T-u_test_p,ord=2,axis=1)
+			neterror = np.average(reduced_err_vec)
+
+			# print(reduced_sols.T-u_test_p)
+			# input()
+			reduced_sols_back = reduced_sols.T@self.V.T
+			reduced_sols_back_reshape = tf.reshape(reduced_sols_back,(self.N_p_test,self.N,self.N))
 			u_test_p = u_test_p@self.V.T
 			u_test_p_grid = tf.constant(u_test_p, dtype = tf.float32)
-			u_test_grid = tf.constant(u_test.T, dtype = tf.float32)
+			u_test_grid = tf.reshape(u_test.T,(self.N_p_test,self.N,self.N))
+			u_test_p_grid = tf.reshape(u_test_p,(self.N_p_test,self.N,self.N))
+			reduced_error = tf.norm(u_test_grid-reduced_sols_back_reshape,axis=[1,2])/tf.norm(u_test_grid,axis=[1,2])
+			reduced_error = tf.reduce_mean(reduced_error)
+			print('Reduced error:',reduced_error)
+			# input()
+			f_res_grid = None
+
 
 		elif self.sampling_method == 1 or self.sampling_method == 2:
+			target_f = tf.zeros([self.N*self.N*self.N_p_test,1])
+			f_res = net.compute_residual(x_tf, y_tf, t_tf, xi_tf, target_f)
 			N_record = [self.Nf, self.Nb, self.Nn, self.N0]
-			u_test_grid = tf.reshape(u_test,(self.N_p_test,self.N,self.N))
+			u_test_grid = tf.reshape(tf.transpose(u_test),(self.N_p_test,self.N,self.N))
 			u_test_p_grid = tf.reshape(u_test_p,(self.N_p_test,self.N,self.N))
 			f_res_grid = tf.reshape(f_res, (self.N_p_test,self.N,self.N))
 
@@ -566,7 +1201,9 @@ class CD_2D_13:
 		err_grid = u_test_grid-u_test_p_grid
 		err_test = tf.math.reduce_mean(tf.square(err_grid))
 
-		relative_err_vec = tf.norm(err_grid,axis=[1,2])/tf.norm(u_test_grid,axis=[1,2])
+		relative_err_vec = tf.norm(err_grid,ord=2,axis=[1,2])/tf.norm(u_test_grid,axis=[1,2],ord=2)
+		err_vec = tf.norm(err_grid,axis=[1,2],ord=2)
+		err_vec_ave = tf.reduce_mean(err_vec)
 		rel_err_test = tf.reduce_mean(relative_err_vec)
 		if record_path is not None:
 			# y_tf = tf.constant((),shape = (len(self.x),0),dtype = tf.float32)
@@ -574,17 +1211,23 @@ class CD_2D_13:
 			# x_tf = tf.constant(self.x.reshape((len(self.x),1)),dtype = tf.float32)
 			# xi_tf = tf.constant(1e-4*np.ones((len(self.x),1)),dtype = tf.float32)
 			# u_test_p = net.forward(x_tf, y_tf, t_tf, xi_tf)
-			list_info = [self.name,net.name, net.layers,N_record,self.L,rel_err_test.numpy(),save_name]
+			list_info = [self.name,net.name, net.layers, self.N_p_train,self.L,rel_err_test.numpy(),save_name,reduced_error.numpy(),neterror,err_vec_ave.numpy(),np.linalg.norm(self.V.T,ord=2)]
 			# scipy.io.savemat(folderpath+"/{0}.mat".format(N_record), {'approx':u_test_p.numpy()})
 			with open(record_path, 'a') as f:
 				writer = csv.writer(f)
 				writer.writerow(list_info)
 		print("Test average error is: {0}\nRelative error is: {1}".format(err_test.numpy(), rel_err_test.numpy()))
 
-		return u_test_grid, u_test_p_grid, err_test, rel_err_test, f_res_grid
+		if self.sampling_method == 0:
+			return u_test_grid, u_test_p_grid, err_test, rel_err_test, f_res_grid,reduced_sols_back_reshape
+		else:
+			return u_test_grid, u_test_p_grid, err_test, rel_err_test, f_res_grid
 
 	def plot_NN(self, net, figure_save_path = None):
-		u_test_grid, u_test_p_grid, _, _, f_res_grid = self.test_NN(net, None)
+		if self.sampling_method == 0:
+			u_test_grid, u_test_p_grid, _, _, f_res_grid, reduced_sols_back_reshape = self.test_NN(net, None)
+		else:
+			u_test_grid, u_test_p_grid, _, _, f_res_grid = self.test_NN(net, None)
 		# if not os.path.exists(figure_save_path):
 		    # os.makedirs(figure_save_path)
 		for i in range(0,self.N_p_test):

@@ -4,6 +4,8 @@ from Environments.CD_comp_steady import CD_comp_steady
 from Environments.CD_1D import CD_1D
 from Environments.CD_2D_1 import CD_2D_1
 from Environments.CD_2D_2 import CD_2D_2
+from Environments.CD_1D_varyingF import CD_1D_varyingF
+from Environments.CD_1D_varyingF1 import CD_1D_varyingF1
 from Environments.CD_2D_3 import CD_2D_3
 from Environments.CD_2D_4 import CD_2D_4
 from Environments.CD_2D_5 import CD_2D_5
@@ -14,6 +16,7 @@ from Environments.CD_2D_9 import CD_2D_9
 from Environments.CD_2D_10 import CD_2D_10
 from Environments.CD_2D_12 import CD_2D_12
 from Environments.CD_2D_13 import CD_2D_13
+from Environments.CD_2D_14 import CD_2D_14
 from Environments.CD_1D_1 import CD_1D_1
 from Environments.CD_1D_2 import CD_1D_2
 from Environments.CD_1D_3 import CD_1D_3
@@ -40,8 +43,18 @@ from Environments.CD_1D_24 import CD_1D_24
 from Environments.CD_1D_25 import CD_1D_25
 from Environments.CD_1D_26 import CD_1D_26
 from Environments.CD_1D_27 import CD_1D_27
+from Environments.NS_AL import NS_AL
+from Environments.NS_AL1 import NS_AL1
+from Environments.NS_AL2 import NS_AL2
+from Environments.NS_AL3 import NS_AL3
+from Environments.NS_AL4 import NS_AL4
 from Environments.Burgers_Equation import Burgers_Equation
 from NN.NN_tf import NN_tf
+from NN.NN_tf_al import NN_tf_al
+from NN.NN_tf_varyingF import NN_tf_varyingF
+from NN.NN_tf_2du import NN_tf_2du
+from NN.NN_tf_2du1 import NN_tf_2du1
+from NN.NN_tf_update import NN_tf_update
 from NN.NN_tf_sym import NN_tf_sym
 from NN.NN_trans_tf import NN_trans_tf
 from NN.NN_trans_tf_a import NN_trans_tf_a
@@ -49,8 +62,26 @@ from NN.NN_trans_tf_a1 import NN_trans_tf_a1
 from NN.NN_trans_tf_dense import NN_trans_tf_dense
 from NN.NN_trans_tf_dense1 import NN_trans_tf_dense1
 from NN.ResNet_tf import ResNet_tf
+from NN.ResNet_tf_al import ResNet_tf_al
+from NN.ResNet_tf_al_negnorm import ResNet_tf_al_negnorm
+from NN.ResNet_tf_al_res import ResNet_tf_al_res
+from NN.FracNet_tf_al_negnorm import FracNet_tf_al_negnorm
+from NN.FracNet_tf_al_res import FracNet_tf_al_res
+from NN.FracNet_tf_al import FracNet_tf_al
 from NN.RNN_tf import RNN_tf
 from Optimizers.train_lm import train_lm
+from Optimizers.train_lm_varyingF import train_lm_varyingF
+from Optimizers.train_lm_2du import train_lm_2du
+from Optimizers.train_lm_2du1 import train_lm_2du1
+from Optimizers.train_lbfgs_2du1 import train_lbfgs_2du1
+from Optimizers.train_sgd_2du1 import train_sgd_2du1
+from Optimizers.train_lm_update import train_lm_update
+from Optimizers.train_lm_update import train_lm_update_b
+from Optimizers.train_lm_update import train_lm_update_tol
+from Optimizers.train_lm_update_tol import train_lm_update_tol1
+from Optimizers.train_lm_update import train_lm_update_tol2
+from Optimizers.train_lm_update import train_lm_update_tol3
+from Optimizers.train_lm_update import train_lm_update_BD
 from Optimizers.train_lm_a import train_lm_a
 from Optimizers.train_Adam import train_Adam
 from Optimizers.train_sgd import train_sgd
@@ -61,6 +92,7 @@ from Visualization.res_plot import Res_Vis
 import matplotlib.pyplot as plt 
 from mpl_toolkits.mplot3d import Axes3D
 import time
+from datetime import datetime
 import scipy.io
 import os 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1' 
@@ -102,11 +134,14 @@ class NN_Driver:
 			os.makedirs(PATH_W)
 		if not os.path.exists(PATH_L):
 			os.makedirs(PATH_L)
-		htemp = 1/2048
-		self.save_name = "Net{6}_Layers{0}_Ntr{1}_h{2}_Reg{3}_Sample{4}_Weight{5}_Opt{7}_L{8}{9}_streamline1000".format(self.layers, Ntr, int(1/htemp), regular_alphas, self.sampling_method, type_weighting, self.net_toggle,self.opt_toggle, self.L, self.app_str)
+		if self.sampling_method == 0:
+			htemp = self.h
+		else:
+			htemp = 1/2048
+		self.save_name = "Net{6}_Layers{0}_Ntr{1}_h{2}_Reg{3}_Sample{4}_Weight{5}_Opt{7}_L{8}{9}_res".format(self.layers, Ntr, int(1/htemp), regular_alphas, self.sampling_method, type_weighting, self.net_toggle,self.opt_toggle, self.L, self.app_str)
 		self.path_weight = PATH_W + self.save_name+ ".npz"
 		if self.method_str == "PODNN":
-			self.path_log = PATH_L + "Net{6}_Layers{0}_Ntr{1}_h{2}_Reg{3}_Sample{4}_Weight{5}_Opt{7}/L{8}/".format(self.layers, Ntr, int(1/htemp), regular_alphas, self.sampling_method, type_weighting, self.net_toggle,self.opt_toggle,self.L)
+			self.path_log = PATH_L + "Net{6}_Layers{0}_Ntr{1}_h{2}_Reg{3}_Sample{4}_Weight{5}_Opt{7}{9}/L{8}/".format(self.layers, Ntr, int(1/htemp), regular_alphas, self.sampling_method, type_weighting, self.net_toggle,self.opt_toggle,self.L,self.app_str)
 		elif self.method_str == "PINN":
 			self.path_log = PATH_L + "{0}/".format(self.save_name)
 
@@ -115,6 +150,8 @@ class NN_Driver:
 		self.path_env = "./Environments/{0}/".format(self.env_toggle)
 		if not os.path.exists(self.path_env):
 			os.makedirs(self.path_env)
+
+		self.log_dir = self.path_log+datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
 		self.Ntr_name = ["Res", "B_D", "B_N", "Init"]
 		self.Ntr_t = np.any(np.array([Ntr]),axis=0)
@@ -140,6 +177,10 @@ class NN_Driver:
 			self.env = CD_1D_1(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
 		elif self.env_toggle == "CD_1D_2":
 			self.env = CD_1D_2(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+		elif self.env_toggle == "CD_1D_varyingF":
+			self.env = CD_1D_varyingF(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+		elif self.env_toggle == "CD_1D_varyingF1":
+			self.env = CD_1D_varyingF1(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
 		elif self.env_toggle == "CD_1D_3":
 			self.env = CD_1D_3(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
 		elif self.env_toggle == "CD_1D_4":
@@ -212,13 +253,45 @@ class NN_Driver:
 			self.env = CD_2D_12(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
 		elif self.env_toggle == "CD_2D_13":
 			self.env = CD_2D_13(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+		elif self.env_toggle == "CD_2D_14":
+			self.env = CD_2D_14(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+		elif self.env_toggle == "NS_AL":
+			self.env = NS_AL(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+		elif self.env_toggle == "NS_AL1":
+			self.env = NS_AL1(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+		elif self.env_toggle == "NS_AL2":
+			self.env = NS_AL2(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+		elif self.env_toggle == "NS_AL3":
+			self.env = NS_AL3(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
+		elif self.env_toggle == "NS_AL4":
+			self.env = NS_AL4(self.Ntr, self.test_size, self.h, type_weighting = self.type_weighting, sampling_method = self.sampling_method, path_env = self.path_env, L = self.L)
 
 
 	def initialize_net(self):
 		if self.net_toggle == "Dense":
 			self.net = NN_tf(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
+		elif self.net_toggle == "Dense_al":
+			self.net = NN_tf_al(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
+		elif self.net_toggle == "Frac_al":
+			self.net = FracNet_tf_al(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
+		elif self.net_toggle == "Frac_al_res":
+			self.net = FracNet_tf_al_res(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
+		elif self.net_toggle == "Frac_al_negnorm":
+			self.net = FracNet_tf_al_negnorm(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
+		elif self.net_toggle == "Dense_varyingF":
+			self.net = NN_tf_varyingF(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
+		elif self.net_toggle == "Dense_2du":
+			self.net = NN_tf_2du(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
+		elif self.net_toggle == "Dense_2du1":
+			self.net = NN_tf_2du1(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
 		elif self.net_toggle == "Res":
 			self.net = ResNet_tf(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
+		elif self.net_toggle == "Res_al":
+			self.net = ResNet_tf_al(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
+		elif self.net_toggle == "Res_al_negnorm":
+			self.net = ResNet_tf_al_negnorm(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
+		elif self.net_toggle == "Res_al_res":
+			self.net = ResNet_tf_al_res(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
 		elif self.net_toggle == "RNN":
 			self.net = RNN_tf(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
 		elif self.net_toggle == "Dense_trans":
@@ -233,7 +306,8 @@ class NN_Driver:
 			self.net = NN_trans_tf_dense(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
 		elif self.net_toggle == "Dense_trans_dense1":
 			self.net = NN_trans_tf_dense1(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
-
+		elif self.net_toggle == "Dense_update":
+			self.net = NN_tf_update(self.input_size, self.output_size, self.layers, self.env, self.regular_alphas)
 
 	def process_training_samples(self):
 		if self.net_toggle != "RNN":
@@ -241,11 +315,19 @@ class NN_Driver:
 				self.samples_list = self.env.generate_POD_samples(self.app_str)
 			elif self.sampling_method == 1 or self.sampling_method == 2:
 				self.samples_list = self.env.generate_PINN_samples(self.app_str)
+				self.net.load_mat() 
+				
+				try:
+					self.net.load_mat() 
+
+				except AttributeError:
+					pass
 		else:
 			self.sampling_method = 3
 			self.samples_list = self.env.generate_RNN_samples()
 
 	def train_nn(self, save_for_plot = False, save_toggle = True):
+		# tf.profiler.experimental.start(self.log_dir)
 		if self.opt_toggle == "lm":
 			# third input: maximum epoch; fourth input: tolerance; fifth: starting lambda parameter; sixth: factor to change lambda
 			if save_for_plot:
@@ -257,6 +339,62 @@ class NN_Driver:
 					pass
 			else:
 				train_lm(self.net, self.samples_list, 1000, 1e-7, 1e-2, 2, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log)
+		elif self.opt_toggle == "lm_varyingF":
+			# third input: maximum epoch; fourth input: tolerance; fifth: starting lambda parameter; sixth: factor to change lambda
+			if save_for_plot:
+				self.plot_weight_foldername = "./Plot/Data/Weights/{1}/{0}/{2}".format(self.env_toggle,self.method_str,self.save_name)
+				if not os.path.exists(self.plot_weight_foldername):
+					os.makedirs(self.plot_weight_foldername)
+					train_lm_varyingF(self.net, self.samples_list, 1000, 1e-7, 1e-2, 2, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log, path_plot = self.plot_weight_foldername)
+				else:
+					pass
+			else:
+				train_lm_varyingF(self.net, self.samples_list, 1000, 1e-7, 1e-2, 2, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log)
+		elif self.opt_toggle == "lm_2du":
+			# third input: maximum epoch; fourth input: tolerance; fifth: starting lambda parameter; sixth: factor to change lambda
+			if save_for_plot:
+				self.plot_weight_foldername = "./Plot/Data/Weights/{1}/{0}/{2}".format(self.env_toggle,self.method_str,self.save_name)
+				if not os.path.exists(self.plot_weight_foldername):
+					os.makedirs(self.plot_weight_foldername)
+					train_lm_2du(self.net, self.samples_list, 1000, 1e-7, 1e-2, 2, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log, path_plot = self.plot_weight_foldername)
+				else:
+					pass
+			else:
+				train_lm_2du(self.net, self.samples_list, 1000, 1e-7, 1e-2, 2, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log)
+		elif self.opt_toggle == "lm_2du1":
+			# third input: maximum epoch; fourth input: tolerance; fifth: starting lambda parameter; sixth: factor to change lambda
+			if save_for_plot:
+				self.plot_weight_foldername = "./Plot/Data/Weights/{1}/{0}/{2}".format(self.env_toggle,self.method_str,self.save_name)
+				if not os.path.exists(self.plot_weight_foldername):
+					os.makedirs(self.plot_weight_foldername)
+					train_lm_2du1(self.net, self.samples_list, 1000, 1e-7, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log, path_plot = self.plot_weight_foldername)
+				else:
+					pass
+			else:
+				train_lm_2du1(self.net, self.samples_list, 1000, 1e-7, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log)
+
+		elif self.opt_toggle == "lbfgs_2du1":
+			# third input: maximum epoch; fourth input: tolerance; fifth: starting lambda parameter; sixth: factor to change lambda
+			if save_for_plot:
+				self.plot_weight_foldername = "./Plot/Data/Weights/{1}/{0}/{2}".format(self.env_toggle,self.method_str,self.save_name)
+				if not os.path.exists(self.plot_weight_foldername):
+					os.makedirs(self.plot_weight_foldername)
+					train_lbfgs_2du1(self.net, self.samples_list, 1000, 1e-7, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log, path_plot = self.plot_weight_foldername)
+				else:
+					pass
+			else:
+				train_lbfgs_2du1(self.net, self.samples_list, 1000, 1e-7, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log)
+		elif self.opt_toggle == "sgd_2du1":
+			# third input: maximum epoch; fourth input: tolerance; fifth: starting lambda parameter; sixth: factor to change lambda
+			if save_for_plot:
+				self.plot_weight_foldername = "./Plot/Data/Weights/{1}/{0}/{2}".format(self.env_toggle,self.method_str,self.save_name)
+				if not os.path.exists(self.plot_weight_foldername):
+					os.makedirs(self.plot_weight_foldername)
+					train_sgd_2du1(self.net, self.samples_list, 1000, 1e-7, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log, path_plot = self.plot_weight_foldername)
+				else:
+					pass
+			else:
+				train_sgd_2du1(self.net, self.samples_list, 1000, 1e-7, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log)
 		elif self.opt_toggle == "lm_a":
 			if save_for_plot:
 				self.plot_weight_foldername = "./Plot/Data/Weights/{1}/{0}/{2}".format(self.env_toggle,self.method_str,self.save_name)
@@ -267,16 +405,93 @@ class NN_Driver:
 					pass
 			else:
 				train_lm_a(self.net, self.samples_list, 1000, 1e-7, 1e-2, 2, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log)
+		elif self.opt_toggle == "lm_update":
+			if save_for_plot:
+				self.plot_weight_foldername = "./Plot/Data/Weights/{1}/{0}/{2}".format(self.env_toggle,self.method_str,self.save_name)
+				if not os.path.exists(self.plot_weight_foldername):
+					os.makedirs(self.plot_weight_foldername)
+					train_lm_update(self.net, self.samples_list, 1000, 1e-7, 1e-2, 2, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log, path_plot = self.plot_weight_foldername)
+				else:
+					pass
+			else:
+				train_lm_update(self.net, self.samples_list, 1000, 1e-7, 1e-2, 2, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log)
+		elif self.opt_toggle == "lm_update_tol":
+			if save_for_plot:
+				self.plot_weight_foldername = "./Plot/Data/Weights/{1}/{0}/{2}".format(self.env_toggle,self.method_str,self.save_name)
+				if not os.path.exists(self.plot_weight_foldername):
+					os.makedirs(self.plot_weight_foldername)
+					train_lm_update_tol(self.net, self.samples_list, 1000, 1e-7, 1e-2, 2, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log, path_plot = self.plot_weight_foldername)
+				else:
+					pass
+			else:
+				train_lm_update_tol(self.net, self.samples_list, 1000, 1e-7, 1e-2, 2, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log)
+		elif self.opt_toggle == "lm_update_tol1":
+			if save_for_plot:
+				self.plot_weight_foldername = "./Plot/Data/Weights/{1}/{0}/{2}".format(self.env_toggle,self.method_str,self.save_name)
+				if not os.path.exists(self.plot_weight_foldername):
+					os.makedirs(self.plot_weight_foldername)
+					train_lm_update_tol1(self.net, self.samples_list, 1000, 1e-7, 1e-2, 2, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log, path_plot = self.plot_weight_foldername)
+				else:
+					pass
+			else:
+				train_lm_update_tol1(self.net, self.samples_list, 1000, 1e-7, 1e-2, 2, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log)
+		elif self.opt_toggle == "lm_update_tol2":
+			if save_for_plot:
+				self.plot_weight_foldername = "./Plot/Data/Weights/{1}/{0}/{2}".format(self.env_toggle,self.method_str,self.save_name)
+				if not os.path.exists(self.plot_weight_foldername):
+					os.makedirs(self.plot_weight_foldername)
+					train_lm_update_tol2(self.net, self.samples_list, 1000, 1e-7, 1e-2, 2, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log, path_plot = self.plot_weight_foldername)
+				else:
+					pass
+			else:
+				train_lm_update_tol2(self.net, self.samples_list, 1000, 1e-7, 1e-2, 2, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log)
+		elif self.opt_toggle == "lm_update_tol3":
+			if save_for_plot:
+				self.plot_weight_foldername = "./Plot/Data/Weights/{1}/{0}/{2}".format(self.env_toggle,self.method_str,self.save_name)
+				if not os.path.exists(self.plot_weight_foldername):
+					os.makedirs(self.plot_weight_foldername)
+					train_lm_update_tol3(self.net, self.samples_list, 1000, 1e-7, 1e-2, 2, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log, path_plot = self.plot_weight_foldername)
+				else:
+					pass
+			else:
+				train_lm_update_tol3(self.net, self.samples_list, 1000, 1e-7, 1e-2, 2, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log)
+		elif self.opt_toggle == "lm_update_b":
+			if save_for_plot:
+				self.plot_weight_foldername = "./Plot/Data/Weights/{1}/{0}/{2}".format(self.env_toggle,self.method_str,self.save_name)
+				if not os.path.exists(self.plot_weight_foldername):
+					os.makedirs(self.plot_weight_foldername)
+					train_lm_update_b(self.net, self.samples_list, 1000, 1e-7, 1e-2, 2, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log, path_plot = self.plot_weight_foldername)
+				else:
+					pass
+			else:
+				train_lm_update_b(self.net, self.samples_list, 1000, 1e-7, 1e-2, 2, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log)
+		elif self.opt_toggle == "lm_update_bd":
+			if save_for_plot:
+				self.plot_weight_foldername = "./Plot/Data/Weights/{1}/{0}/{2}".format(self.env_toggle,self.method_str,self.save_name)
+				if not os.path.exists(self.plot_weight_foldername):
+					os.makedirs(self.plot_weight_foldername)
+					train_lm_update_BD(self.net, self.samples_list, 1000, 1e-7, 1e-2, 2, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log, path_plot = self.plot_weight_foldername)
+				else:
+					pass
+			else:
+				train_lm_update_BD(self.net, self.samples_list, 1000, 1e-7, 1e-2, 2, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log)
+
 		elif self.opt_toggle == "adam":
 			train_Adam(self.net, self.samples_list, 30000, 1e-7, save_toggle, save_for_plot, path_weight = self.path_weight, path_log = self.path_log)
 		elif self.opt_toggle == "lbfgs":
 			train_lbfgs(self.net, self.Xs_list, self.us_list, 1000, 1e-9, save_toggle, m=100, path_weight = self.path_weight, path_log = self.path_log)
 		elif self.opt_toggle == "sgd":
 			train_sgd(self.net, self.Xs_list, self.us_list, 1000, 1e-9, save_toggle, path_weight = self.path_weight, path_log = self.path_log)
-		print("Time for training: {0}".format(time.time()-self.start_time))
+		traintime = time.time()-self.start_time
+		# tf.profiler.experimental.stop()
+		print("Time for training: {0}".format(traintime))
+		file = open("{0}Training_time_1.txt".format(self.path_log),"w+")
+		file.write("Time for training: {0}".format(traintime))
+		file.close()
+
 
 	def test_nn(self, record_path = None):
-		self.env.test_NN(self.net, None, self.app_str)
+		self.env.test_NN(self.net, record_path, self.app_str)
 		print("Time up to testing: {0}".format(time.time()-self.start_time))
 
 	def load_nn(self, path):
@@ -291,6 +506,13 @@ class NN_Driver:
 		else:
 			self.net.load_weights_biases(path)
 
+	def load_uhat_nn(self, path):
+		print(self.env.name,self.save_name)
+		if path is None:
+			pass
+		else:
+			self.net.load_weights_biases_theta(path)
+
 	def plot_test(self, figure_path = None):
 		self.env.plot_NN(self.net, figure_path)
 
@@ -298,7 +520,7 @@ class NN_Driver:
 		if data_path is not None:
 			if not os.path.exists(data_path):
 			    os.makedirs(data_path)
-		data_name = "{1}_{0}.mat".format(self.save_name,self.env.name)
+		data_name = "{1}_{0}_b.mat".format(self.save_name,self.env.name)
 		u_test_grid, u_test_p_grid, _, _, _ = self.env.test_NN(self.net, data_path, data_name)
 		if data_path is not None:
 			scipy.io.savemat(data_path+"/"+data_name, {'true_solution':u_test_grid.numpy(), 'approximation': u_test_p_grid.numpy(), 'xi':self.env.mu_mat_test, 'x':self.env.x})

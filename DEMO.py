@@ -44,8 +44,8 @@ if train_toggle == 0:
 	pinn.train_nn(save_toggle)
 	pinn.test_nn()
 elif train_toggle == 1:
-	pinn.train_nn()
-	pinn.test_nn()
+	pinn.train_nn(save_toggle = True)
+	# pinn.test_nn()
 elif train_toggle == 2:
 	pinn.load_nn(None)
 	pinn.train_nn()
@@ -74,3 +74,7 @@ elif train_toggle == 9:
 elif train_toggle == 10:
 	pinn.train_nn(save_for_plot = True)
 	pinn.visualize_residual()
+elif train_toggle == 11:
+	pinn.load_uhat_nn("./Log/Weights/PINN/CD_2D_12/"+"NetDense_Layers[32 32 32 32]_Ntr[2000  400    0    0]_h2048_Reg[0.]_Sample2_Weight[1. 1. 0. 0.]_Optlm_L0.npz")
+	pinn.train_nn()
+	pinn.test_nn()

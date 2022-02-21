@@ -20,6 +20,7 @@ class Res_Vis:
 	def __init__(self, net, samplelist, savename,env_name):
 		self.net = net
 		self.samplelist = samplelist
+		# self.create_uniform_mesh()
 		self.savepath = "./Plot/Data/PINN/"+env_name+"/"+savename+"_residual"
 		
 	def generate_res_mat(self,folder):
@@ -38,6 +39,20 @@ class Res_Vis:
 
 		weight_diff = np.zeros([np.prod(final_weight.shape),self.last_iter])
 		biases_diff = np.zeros([np.prod(final_biase.shape),self.last_iter])
+
+		# x = np.linspace(self.net.env.domain[0,0],self.net.env.domain[0,1],num=self.net.env.N)
+		# y = np.linspace(self.net.env.domain[1,0],self.net.env.domain[1,1],num=self.net.env.N)
+		# X, Y = np.meshgrid(x,y)
+		# X_vec = X.reshape([self.net.env.N**2,1])
+		# Y_vec = Y.reshape([self.net.env.N**2,1])
+		# xi_vec = np.ones([self.net.env.N**2,1])*1e-4
+		# target = np.zeros([self.net.env.N**2,1])
+		# t_tf = tf.constant((),shape = (self.net.env.N**2,0),dtype = tf.float32)
+		# x_tf = tf.constant(X_vec,dtype = tf.float32)
+		# y_tf = tf.constant(Y_vec,dtype = tf.float32)
+		# xi_tf = tf.constant(xi_vec,dtype = tf.float32)
+		# target_tf = tf.constant(target, dtype = tf.float32)
+
 		for epoch in range(self.last_iter):
 			filename = self.stored_weights_path+"/{0}.npz".format(epoch)
 			npzfile = np.load(filename)
@@ -56,16 +71,37 @@ class Res_Vis:
 				N = dict_i["N"]
 				weight = dict_i["weight"]
 
+
 				if name_i == "Res":
 					f_res = self.net.compute_residual(x_tf, y_tf, t_tf, xi_tf, target)
-					ur, u_xr, u_yr, u_tr, u_xxr, u_yyr = self.net.derivatives(x_tf, y_tf, t_tf, xi_tf)
+					ur, u_xr, u_yr, u_tr, u_xxr, u_yyr, u_xyr = self.net.derivatives(x_tf, y_tf, t_tf, xi_tf)
+					
 					data_name = "res_{0}.mat".format(epoch)
-					scipy.io.savemat(self.savepath+"/"+data_name, {"res_x":x_tf.numpy(),"res_xi":xi_tf.numpy(),"res":f_res.numpy(),"u":ur.numpy(),"u_x":u_xr.numpy(),"u_xx":u_xxr.numpy()})
+					scipy.io.savemat(self.savepath+"/"+data_name, {"res_x":x_tf.numpy(),"res_y":y_tf.numpy(),"res_xi":xi_tf.numpy(),"res":f_res.numpy(),"u":ur.numpy(),"u_x":u_xr.numpy(),"u_y":u_yr.numpy(),"u_xx":u_xxr.numpy(),"u_yy":u_yyr.numpy()})
 
 				elif name_i == "B_D":
 					err_do = self.net.compute_solution(x_tf, y_tf, t_tf, xi_tf, target)
-					ubd, u_xbd, u_ybd, u_tbd, u_xxbd, u_yybd = self.net.derivatives(x_tf, y_tf, t_tf, xi_tf)
+					ubd, u_xbd, u_ybd, u_tbd, u_xxbd, u_yybd, u_xybd = self.net.derivatives(x_tf, y_tf, t_tf, xi_tf)
 						
 				elif name_i == "B_N":
 					err_n = self.net.compute_neumann(x_tf, y_tf, t_tf, xi_tf,target)
-					ubn, u_xbn, u_ybn, u_tbn, u_xxbn, u_yybn = self.net.derivatives(x_tf, y_tf, t_tf, xi_tf)
+					ubn, u_xbn, u_ybn, u_tbn, u_xxbn, u_yybn, u_xybn = self.net.derivatives(x_tf, y_tf, t_tf, xi_tf)
+
+	def create_uniform_mesh(self,p=1e-4):
+		self.samplelist = []
+		x = np.linspace(self.net.env.domain[0,0],self.net.env.domain[0,1],num=self.net.env.N)
+		y = np.linspace(self.net.env.domain[1,0],self.net.env.domain[1,1],num=self.net.env.N)
+		X, Y = np.meshgrid(x,y)
+		X_vec = X.reshape([self.net.env.N**2,1])
+		Y_vec = Y.reshape([self.net.env.N**2,1])
+		xi_vec = np.ones([self.net.env.N**2,1])*p
+		target = np.zeros([self.net.env.N**2,1])
+		t_tf = tf.constant((),shape = (self.net.env.N**2,0),dtype = tf.float32)
+		x_tf = tf.constant(X_vec,dtype = tf.float32)
+		y_tf = tf.constant(Y_vec,dtype = tf.float32)
+		xi_tf = tf.constant(xi_vec,dtype = tf.float32)
+		target_tf = tf.constant(target, dtype = tf.float32)
+		N = tf.constant(self.net.env.N**2, dtype = tf.float32)
+		weight = tf.constant(1, dtype = tf.float32)
+		sample_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'Res', 'weight':weight}
+		self.samplelist.append(sample_dict)

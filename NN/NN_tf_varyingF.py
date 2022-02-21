@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 import os 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1' 
 import time
@@ -10,10 +11,10 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 tf.random.set_seed(5)
 
-class ResNet_tf:
+class NN_tf_varyingF:
 	def __init__(self, input_size, output_size, layers, env, regular_alphas):
 		self.env = env
-		self.name = "Res"
+		self.name = "DNN_varyingF"
 		self.input_size = input_size
 		self.output_size = output_size
 		self.layers = layers
@@ -25,8 +26,9 @@ class ResNet_tf:
 		self.loss_b_d_list = []
 		self.loss_b_n_list = []
 		self.loss_init_list = []
-
+		
 	def initialize_NN(self):
+		# initializing lists to store weights and dimension of weights
 		num_layers = len(self.layers) 
 		self.weights = []
 		self.weights_dims = []
@@ -35,11 +37,11 @@ class ResNet_tf:
 		self.weights_len = 0
 		self.biases_len = 0
 
+		# create input layer
 		W_name = "weight_{0}".format("input")
 		W = self.xavier_init(size=[1, self.input_size*self.layers[0]], name = W_name)
 		self.weights_len += self.input_size*self.layers[0]
 		b_name = "bias_{0}".format("input")
-		# b = self.xavier_init(size = [1, self.layers[0]], name = b_name)
 		b = tf.Variable(tf.zeros(shape = [1, self.layers[0]]), name = b_name)
 		self.biases_len += self.layers[0]
 
@@ -48,13 +50,13 @@ class ResNet_tf:
 		self.weights.append(W)
 		self.biases.append(b)
 
+		# create hidden layers
 		for l in range(num_layers-1):
 			W_name = "weight_{0}".format(l)
 			W = self.xavier_init(size=[1, self.layers[l]*self.layers[l+1]], name = W_name)
 			self.weights_len += self.layers[l]*self.layers[l+1]
 
 			b_name = "bias_{0}".format(l)
-			# b = self.xavier_init(size = [1, self.layers[l+1]], name = b_name)
 			b = tf.Variable(tf.zeros(shape = [1, self.layers[l+1]]), name = b_name)
 			self.biases_len += self.layers[l+1]
 
@@ -64,10 +66,10 @@ class ResNet_tf:
 			self.weights.append(W)
 			self.biases.append(b)
 
+		# create output layer
 		W_name = "weight_{0}".format("ouput")
 		b_name = "biase_{0}".format("ouput")
 		W = self.xavier_init(size=[1, self.layers[-1]*self.output_size], name = W_name)
-		# b = self.xavier_init(size = [1, self.output_size], name = b_name)
 		b =tf.Variable(tf.zeros(shape = [1, self.output_size]), name = b_name)
 
 		self.weights_len += self.output_size*self.layers[-1]
@@ -79,30 +81,38 @@ class ResNet_tf:
 		self.weights.append(W)
 		self.biases.append(b)
 
-
 	def xavier_init(self, size, name):
-		xavier_stddev = np.sqrt(6)/np.sqrt(np.sum(size)) #np.sqrt(2/(in_dim + out_dim))
-		return tf.Variable(tf.random.uniform(size, minval = -np.sqrt(6)/np.sqrt(np.sum(size)), maxval = np.sqrt(6)/np.sqrt(np.sum(size))), dtype=tf.float32, name = name)
+		xavier_stddev = np.sqrt(6)/np.sqrt(np.sum(size)) 
+		return tf.Variable(tf.random.normal(size, mean = 0,\
+		 stddev = xavier_stddev), dtype=tf.float32, name = name)
 
 	@tf.function
-	def forward(self, x_tf, y_tf, t_tf, xi_tf):
+	def forward(self, x_tf, y_tf, t_tf, xi_tf, f_tf):
 		num_layers = len(self.weights) 
-		X = tf.concat((x_tf, y_tf, t_tf, xi_tf), axis = -1)
+		# x_tf = x_tf+0.5/xi_tf
+		# x_tf = (1-x_tf)/xi_tf
+
+		X = tf.concat((x_tf, y_tf, t_tf, xi_tf, f_tf), axis = -1)
+
+		# H = (X - self.lb)/(self.ub - self.lb)
+		# H = (X - self.lb)/(self.ub - self.lb)+0.5 #skewcluster
+		# H = (X - self.lb)/(self.ub - self.lb)-0.5 #skewcluster
+		# H = (X - self.lb)/(self.ub - self.lb)-tf.constant(np.array([0.5,0]), dtype = tf.float32)
 		H = (X - self.lb)/(self.ub - self.lb)
-		W = tf.reshape(self.weights[0], self.weights_dims[0])
-		b = self.biases[0]
-		H = tf.keras.activations.tanh(tf.matmul(H, W) + b)
-		for l in range(1,num_layers-1):
+		# H = X
+		# H = 0.5*H+0.5
+		for l in range(num_layers-1):
 			W = tf.reshape(self.weights[l], self.weights_dims[l])
 			b = self.biases[l]
-			H = H + tf.keras.activations.tanh(tf.matmul(H, W) + b)	
+			# H = tf.keras.activations.tanh(tf.matmul(H, W) + b -0.5) #skewtanh	
+			H = tf.keras.activations.tanh(tf.matmul(H, W) + b)	
 		W = tf.reshape(self.weights[-1], self.weights_dims[-1])
 		b = self.biases[-1]
 		H = tf.matmul(H, W) + b
 		return H
 
 	@tf.function
-	def derivatives(self, x_tf, y_tf, t_tf, xi_tf):
+	def derivatives(self, x_tf, y_tf, t_tf, xi_tf, f_tf):
 		with tf.GradientTape(persistent = True) as tape1:
 			tape1.watch(x_tf)
 			tape1.watch(y_tf)
@@ -111,31 +121,39 @@ class ResNet_tf:
 				tape.watch(x_tf)
 				tape.watch(y_tf)
 				tape.watch(t_tf)
-				H = self.forward(x_tf, y_tf, t_tf, xi_tf)
+				H = self.forward(x_tf, y_tf, t_tf, xi_tf, f_tf)
 			u_x = tape.gradient(H, x_tf)
 			u_y = tape.gradient(H, y_tf)
 			u_t = tape.gradient(H, t_tf)
 		u_xx = tape1.gradient(u_x, x_tf)
 		u_yy = tape1.gradient(u_y, y_tf)
-		return H, u_x, u_y, u_t, u_xx, u_yy
+		u_xy = tape1.gradient(u_x, y_tf)
+		return H, u_x, u_y, u_t, u_xx, u_yy, u_xy
 
 	@tf.function
-	def compute_residual(self, x_tf, y_tf, t_tf, xi_tf, target):
-		u, u_x, u_y, u_t, u_xx, u_yy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
-		f_res = self.env.f_res(x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy)
+	def compute_residual(self, x_tf, y_tf, t_tf, xi_tf, f_tf, target):
+		u, u_x, u_y, u_t, u_xx, u_yy, u_xy = self.derivatives(x_tf, y_tf, t_tf, xi_tf, f_tf)
+		f_res = self.env.f_res(x_tf, y_tf, t_tf, xi_tf, f_tf, u, u_x, u_y, u_t, u_xx, u_yy, u_xy)
+		f_err = f_res - target
+		return f_err
+
+	@tf.function
+	def compute_reduced_residual(self, x_tf, y_tf, t_tf, xi_tf, f_tf, target):
+		u, u_x, u_y, u_t, u_xx, u_yy, u_xy = self.derivatives(x_tf, y_tf, t_tf, xi_tf, f_tf)
+		f_res = self.env.f_reduced_res(x_tf, y_tf, t_tf, xi_tf, f_tf, u, u_x, u_y, u_t, u_xx, u_yy, u_xy)
 		f_err = f_res - target
 		return f_err
 
 	@tf.function 
-	def compute_neumann(self, x_tf, y_tf, t_tf, xi_tf, target):
-		u, u_x, u_y, u_t, u_xx, u_yy = self.derivatives(x_tf, y_tf, t_tf, xi_tf)
-		ub_n_p = self.env.neumann_bc(u_x, u_y)
+	def compute_neumann(self, x_tf, y_tf, t_tf, xi_tf, f_tf, target):
+		u, u_x, u_y, u_t, u_xx, u_yy, u_xy = self.derivatives(x_tf, y_tf, t_tf, xi_tf, f_tf)
+		ub_n_p = self.env.neumann_bc(x_tf, y_tf, t_tf, xi_tf, f_tf, u_x, u_y)
 		err = ub_n_p - target
 		return err
 
 	@tf.function
-	def compute_solution(self, x_tf, y_tf, t_tf, xi_tf, target):
-		u_p = self.forward(x_tf, y_tf, t_tf, xi_tf)
+	def compute_solution(self, x_tf, y_tf, t_tf, xi_tf, f_tf, target):
+		u_p = self.forward(x_tf, y_tf, t_tf, xi_tf, f_tf)
 		err = u_p - target
 		return err
 
@@ -149,13 +167,13 @@ class ResNet_tf:
 			y_tf = dict_i["y_tf"]
 			t_tf = dict_i["t_tf"]
 			xi_tf = dict_i["xi_tf"]
+			f_tf = dict_i["f_tf"]
 			target = dict_i["target"]
 			N = dict_i["N"]
 			weight = dict_i["weight"]
 
-
 			if name_i == "Res":
-				f_res = self.compute_residual(x_tf, y_tf, t_tf, xi_tf, target)
+				f_res = self.compute_residual(x_tf, y_tf, t_tf, xi_tf, f_tf, target)
 				f_u = f_res*np.sqrt(weight/N)
 				loss_f = tf.math.reduce_sum(f_u**2)/2
 				loss_val = loss_val + loss_f
@@ -164,7 +182,7 @@ class ResNet_tf:
 					self.loss_f_list.append(loss_f.numpy())
 
 			elif name_i == "B_D":
-				err_do = self.compute_solution(x_tf, y_tf, t_tf, xi_tf, target)
+				err_do = self.compute_solution(x_tf, y_tf, t_tf, xi_tf, f_tf, target)
 				err_d = err_do*np.sqrt(weight/N)
 				loss_d = tf.math.reduce_sum(err_d**2)/2
 				loss_val = loss_val + loss_d
@@ -173,7 +191,7 @@ class ResNet_tf:
 					self.loss_b_d_list.append(loss_d.numpy())
 					
 			elif name_i == "B_N":
-				err_n = self.compute_neumann(x_tf, y_tf, t_tf, xi_tf,target)
+				err_n = self.compute_neumann(x_tf, y_tf, t_tf, xi_tf, f_tf,target)
 				err_n = (err_n)*np.sqrt(weight/N)
 				loss_n = tf.math.reduce_sum(err_n**2)/2
 				loss_val = loss_val + loss_n
@@ -182,7 +200,7 @@ class ResNet_tf:
 					self.loss_b_n_list.append(loss_n.numpy())
 
 			elif name_i == "Init":
-				err_0 = self.compute_solution(x_tf, y_tf, t_tf, xi_tf, target)
+				err_0 = self.compute_solution(x_tf, y_tf, t_tf, xi_tf, f_tf, target)
 				err_0 = (err_0)*np.sqrt(weight/N)
 				loss_0 = tf.math.reduce_sum(err_0**2)/2
 				loss_val = loss_val + loss_0
@@ -190,7 +208,7 @@ class ResNet_tf:
 					self.loss_init_list.append(loss_0.numpy())
 
 			elif name_i == "Reduced":
-				f_res = self.compute_reduced_residual(x_tf, y_tf, t_tf, xi_tf, target)
+				f_res = self.compute_reduced_residual(x_tf, y_tf, t_tf, xi_tf, f_tf, target)
 				f_u = f_res*np.sqrt(weight/N)
 				loss_f = tf.math.reduce_sum(f_u**2)/2
 				loss_val = loss_val + loss_f
@@ -200,14 +218,12 @@ class ResNet_tf:
 			biases = tf.concat(self.biases, axis = -1)
 			loss_val = loss_val + self.regular_alphas*(tf.norm(weights)**2+tf.norm(biases)**2)
 
-
 		return loss_val
 
-
 	@tf.function
-	def construct_Jacobian_solution(self, x_tf, y_tf, t_tf, xi_tf, target, N, weight):
+	def construct_Jacobian_solution(self, x_tf, y_tf, t_tf, xi_tf, f_tf, target, N, weight):
 		with tf.GradientTape(persistent = True) as tape:
-			err = self.compute_solution(x_tf, y_tf, t_tf, xi_tf, target)*tf.math.sqrt(weight/N)
+			err = self.compute_solution(x_tf, y_tf, t_tf, xi_tf, f_tf, target)*tf.math.sqrt(weight/N)
 			err = tf.reshape(err, [tf.reduce_prod(tf.shape(err)),1])
 		weights_jacobians = tape.jacobian(err, self.weights)
 		biases_jacobians = tape.jacobian(err, self.biases)
@@ -218,9 +234,9 @@ class ResNet_tf:
 		return jacobs_tol_W, jacobs_tol_b, err
 
 	@tf.function
-	def construct_Jacobian_residual(self, x_tf, y_tf, t_tf, xi_tf, target, N, weight):
+	def construct_Jacobian_residual(self, x_tf, y_tf, t_tf, xi_tf, f_tf, target, N, weight):
 		with tf.GradientTape(persistent = True) as tape:
-			f_res = self.compute_residual(x_tf, y_tf, t_tf, xi_tf, target)
+			f_res = self.compute_residual(x_tf, y_tf, t_tf, xi_tf, f_tf, target)
 			err = (f_res)*tf.math.sqrt(weight/N)
 			err = tf.reshape(err, [tf.reduce_prod(tf.shape(err)),1])
 		weights_jacobians = tape.jacobian(err, self.weights)
@@ -234,9 +250,25 @@ class ResNet_tf:
 		return jacobs_tol_W, jacobs_tol_b, err
 
 	@tf.function
-	def construct_Jacobian_neumann(self, x_tf, y_tf, t_tf, xi_tf, target, N, weight):
+	def construct_Jacobian_reduced_residual(self, x_tf, y_tf, t_tf, xi_tf, f_tf, target, N, weight):
 		with tf.GradientTape(persistent = True) as tape:
-			err = self.compute_neumann(x_tf, y_tf, t_tf, xi_tf, target)*tf.math.sqrt(weight/N)
+			f_res = self.compute_reduced_residual(x_tf, y_tf, t_tf, xi_tf, f_tf, target)
+			err = (f_res)*tf.math.sqrt(weight/N)
+			err = tf.reshape(err, [tf.reduce_prod(tf.shape(err)),1])
+		weights_jacobians = tape.jacobian(err, self.weights)
+		biases_jacobians = tape.jacobian(err, self.biases)
+		if biases_jacobians[-1] is None:
+			biases_jacobians[-1] = tf.zeros([tf.shape(biases_jacobians[0])[0], \
+				self.output_size, 1, self.output_size])
+		jacobs_tol_W = tf.squeeze(tf.concat(weights_jacobians, axis = -1))
+		jacobs_tol_b = tf.squeeze(tf.concat(biases_jacobians, axis = -1))
+		del tape
+		return jacobs_tol_W, jacobs_tol_b, err
+
+	@tf.function
+	def construct_Jacobian_neumann(self, x_tf, y_tf, t_tf, xi_tf, f_tf, target, N, weight):
+		with tf.GradientTape(persistent = True) as tape:
+			err = self.compute_neumann(x_tf, y_tf, t_tf, xi_tf, f_tf, target)*tf.math.sqrt(weight/N)
 			err = tf.reshape(err, [tf.reduce_prod(tf.shape(err)),1])
 		weights_jacobians = tape.jacobian(err, self.weights)
 		biases_jacobians = tape.jacobian(err, self.biases)
@@ -266,11 +298,11 @@ class ResNet_tf:
 		hessian_W = tape_loss.jacobian(loss_grad_W, self.weights)
 		hessian_b = tape_loss.jacobian(loss_grad_b, self.biases)
 		hessian_W = tf.squeeze(tf.concat(hessian_W, axis = 3))
-		if hessian_b[-1] == None:
+		if hessian_b[-1] is None:
 			hessian_b[-1] = tf.zeros([self.biases_len, self.output_size, 1, self.output_size])
 		hessian_b = tf.squeeze(tf.concat(hessian_b, axis = 3))
 		return hessian_W, hessian_b
-
+		
 	def update_weights_biases(self, weights_update, biases_update):
 		num_layers = len(self.biases)
 		W_ind_count = 0
@@ -352,27 +384,31 @@ class ResNet_tf:
 
 	def select_batch(self, samples_list, batch_size = 64): 
 		sample_batch_list = []
-		batch_sizes = []
 		for i in range(len(samples_list)):
 			sample_i = samples_list[i]
+			x_i = sample_i["x_tf"]
+			y_i = sample_i["y_tf"]
+			t_i = sample_i["t_tf"]
+			xi_i = sample_i["xi_tf"]
+			output_i = sample_i["target"]
+			type_str = sample_i["type"]
 			N = sample_i["N"]
+
 			if N>batch_size:
 				N_sel = np.random.choice(N,batch_size).reshape([batch_size,1])
-				input_i = sample_i["input"]
-				output_i = sample_i["output"]
-				Ntr_name_i = sample_i["type"]
-				us_batch = tf.gather_nd(output_i,N_sel)
-				Xs_batch_list = []
-				for z in range(len(input_i)):
-					x_i = input_i[z]
-					Xs_batch_list.append(tf.Variable(tf.gather_nd(x_i,N_sel), trainable = False, name = "batch_{0}".format(z)))
-				samples_i_dict = {"type":Ntr_name_i, "output":us_batch, "input":Xs_batch_list, "N":N}
-				sample_batch_list.append(samples_i_dict)
-				batch_sizes.append(batch_size)
+				target = tf.Variable(tf.gather_nd(output_i,N_sel), trainable = False, name = "batch_output")
+				x_batch = tf.Variable(tf.gather_nd(x_i,N_sel), trainable = False, name = "batch_x")
+				y_batch = tf.Variable(tf.gather_nd(y_i,N_sel), trainable = False, name = "batch_y")
+				t_batch = tf.Variable(tf.gather_nd(t_i,N_sel), trainable = False, name = "batch_t")
+				xi_batch = tf.Variable(tf.gather_nd(xi_i,N_sel), trainable = False, name = "batch_xi")
+
+				N = tf.constant(batch_size, dtype = tf.float32)
+				sample_dict = {'x_tf':x_batch, 'y_tf':y_batch, 't_tf':t_batch, 'xi_tf':xi_batch, 'target':target, 'N':N, 'type':type_str}
+				sample_batch_list.append(sample_dict)
+
 			else:
-				batch_sizes.append(N)
 				sample_batch_list.append(sample_i)
-		return sample_batch_list, batch_sizes
+		return sample_batch_list
 
 	def save_weights_biases(self, filename):
 		_, _, weights_lin, biases_lin = self.get_weights_biases()

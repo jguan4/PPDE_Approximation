@@ -90,6 +90,8 @@ class NN_tf:
 	def forward(self, x_tf, y_tf, t_tf, xi_tf):
 		num_layers = len(self.weights) 
 		# x_tf = x_tf+0.5/xi_tf
+		# x_tf = (1-x_tf)/xi_tf
+
 		X = tf.concat((x_tf, y_tf, t_tf, xi_tf), axis = -1)
 
 		# H = (X - self.lb)/(self.ub - self.lb)

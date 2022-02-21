@@ -12,12 +12,12 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import csv
 
-class CD_2D_12:
+class NS_AL:
 	def __init__(self, N_p_train, N_p_test, h, type_weighting = [1,1,1,1], inner = False, sampling_method = 0, add_sample = False, path_env = "./Environments/", L = 0):
-		self.name = "CD_2D_12"
+		self.name = "NS_AL"
 		self.sampling_method = sampling_method
 		self.u_dim = 2
-		self.P_dim = 1
+		self.P_dim = 3
 		self.domain = np.array([[-1,1],[-1,1]])
 		self.plimits = np.array([[-4,0]])
 		self.x_p_domain = np.array([[-1, 1], [-1, 1], [-4, 0]])
@@ -44,10 +44,10 @@ class CD_2D_12:
 		# return point-wise solutions, including parameters in input
 		elif self.sampling_method == 1 or self.sampling_method == 2:
 			self.state_space_size = self.u_dim+self.P_dim
-			self.output_space_size  = 1
+			self.output_space_size  = 2
 			self.Ns = N_p_train
-			self.lb = np.array([-1.0, -1.0, 1e-4])
-			self.ub = np.array([1.0, 1.0, 1.0])
+			self.lb = np.array([-1.0, -1.0, 1e-4, 0.0, 0.0])
+			self.ub = np.array([1.0, 1.0, 1.0, 1.0, 1.0])
 			self.Nf = N_p_train[0]
 			self.Nb = N_p_train[1]
 			self.Nn = N_p_train[2]
@@ -108,7 +108,7 @@ class CD_2D_12:
 		sampling = LHS(xlimits=self.plimits)
 		# sampling = LHS(xlimits=np.array([[-2,-1]]))
 		self.app_str = app_str
-		filename = self.path_env+"CD_2D_{0}{1}.npy".format(self.N_p_train,app_str)
+		filename = self.path_env+"NS_AL_{0}{1}.npy".format(self.N_p_train,app_str)
 		
 		# check if train parameters exist
 		if os.path.exists(filename):
@@ -124,12 +124,12 @@ class CD_2D_12:
 		# sampling = LHS(xlimits=np.array([[-2,-1]]))
 
 		# check if test parameters exist
-		if os.path.exists(self.path_env+"CD_2D_{0}{1}.npy".format(self.N_p_test,app_str)):
-			self.mu_mat_test = np.load(self.path_env+"CD_2D_{0}{1}.npy".format(self.N_p_test,app_str))
+		if os.path.exists(self.path_env+"NS_AL_{0}{1}.npy".format(self.N_p_test,app_str)):
+			self.mu_mat_test = np.load(self.path_env+"NS_AL_{0}{1}.npy".format(self.N_p_test,app_str))
 		else:
 			self.mu_mat_test = sampling(self.N_p_test).T
 			self.mu_mat_test[0,:] = np.power(10,self.mu_mat_test[0,:])
-			np.save(self.path_env+"CD_2D_{0}{1}.npy".format(self.N_p_test,app_str),self.mu_mat_test)
+			np.save(self.path_env+"NS_AL_{0}{1}.npy".format(self.N_p_test,app_str),self.mu_mat_test)
 
 	def u_exact_train(self,app_str = ""):
 		if self.sampling_method == 0:
@@ -154,7 +154,7 @@ class CD_2D_12:
 		return u
 
 	def u_exact_test(self,app_str = ""):
-		self.generate_para_test("_SD_rand2")
+		self.generate_para_test(app_str)
 		if self.sampling_method == 0:
 			self.u_tests = self.use_ifiss(self.N_p_test,app_str)
 			# self.u_tests = np.array([])
@@ -168,7 +168,7 @@ class CD_2D_12:
 			for i in range(self.mu_mat_test.shape[1]):
 				p = self.mu_mat_test[:,i]
 				self.generate_one_sol(p, test = True)
-			self.u0_tests = self.use_ifiss(self.mu_mat_test.shape[1],"_SD_rand2")
+			# self.u0_tests = self.use_ifiss(self.mu_mat_test.shape[1],"_SD_rand2")
 			return self.generate_PINN_tests()
 		elif self.sampling_method == 3:
 			self.u_tests = np.array([])
@@ -228,12 +228,15 @@ class CD_2D_12:
 		return L,F
 
 	def generate_one_sol(self, p, test = False):
-		L,F = self.generate_A_F(p)
-		u = spsolve(L,F)
-		u = u.reshape((self.ny, self.nx))
-		self.compile_output(u, p, test)
+		# L,F = self.generate_A_F(p)
+		# u = spsolve(L,F)
+		# u = u.reshape((self.ny, self.nx))
+		u1 = 1-(self.Y**2).flatten()
+		# u1 = 1-(self.X**2).flatten()
+		u2 = np.zeros((self.N**2,1))
+		self.compile_output(u1, u2, p, test)
 				
-	def compile_output(self, u, p, test):
+	def compile_output(self, u1, u2, p, test):
 		if self.sampling_method == 0 or self.sampling_method == 3:
 			if self.inner:
 				U = u.reshape((self.nx,1))
@@ -256,10 +259,12 @@ class CD_2D_12:
 				self.u0_samples = np.concatenate((self.u0_samples,u_inner),axis = 0) if self.u0_samples.size else u_inner
 			else:
 				X_0 = self.create_tol_X(p)
-				u_tol = self.fill_BC(u,p)
-				u_tol = u_tol.reshape((self.N*self.N,1))
+				# u_tol = self.fill_BC(u,p)
+				u1_tol = u1.reshape((self.N*self.N,1))
+				u2_tol = u2.reshape((self.N*self.N,1))
+				u0_tol = np.concatenate((u1_tol,u2_tol),axis = 1)
 				self.N0_tests = np.concatenate((self.N0_tests, X_0),axis = 0) if self.N0_tests.size else X_0
-				self.u0_tests = np.concatenate((self.u0_tests, u_tol),axis = 0) if self.u0_tests.size else u_tol				
+				self.u0_tests = np.concatenate((self.u0_tests, u0_tol),axis = 0) if self.u0_tests.size else u0_tol								
 				
 	def fill_BC(self,inner_u,p):
 		u_temp = inner_u.reshape((self.ny,self.nx))
@@ -286,6 +291,9 @@ class CD_2D_12:
 		Y = self.Y.reshape((self.N*self.N,1))
 		P = p*np.ones((self.N*self.N,self.P_dim))
 		X_f = np.concatenate((X,Y,P),axis=1)
+		w1 = 1-Y**2
+		w2 = Y*0
+		X_f = np.concatenate((X_f,w1,w2),axis=1)
 		return X_f
 
 	def generate_RNN_init(self):
@@ -362,12 +370,12 @@ class CD_2D_12:
 		self.app_str = app_str
 		samples_list = []
 
-		filename = "CD_2D_12ver_{0}{1}.npz".format(self.Ns,app_str)
+		filename = "NS_AL_{0}{1}.npz".format(self.Ns,app_str)
 		if os.path.exists("{1}{0}".format(filename,self.path_env)):
 			npzfile = np.load("{1}{0}".format(filename,self.path_env))
 			if self.Nf>0:
 				self.Xf = npzfile['Xf']
-				target_f = np.zeros([self.Nf,1])
+				target_f = npzfile['target_f']
 			else:
 				self.Xf_tf = None
 			if self.Nb>0:
@@ -380,289 +388,166 @@ class CD_2D_12:
 			else:
 				self.X0_tf = None
 				self.u0_tf = None
+			if self.Nn>0:
+				self.Xn = npzfile['Xn']
+				self.un = npzfile['un']
+			else:
+				self.Xn = None 
+				self.un = None
 			if self.Nr>0:
 				self.Xr = npzfile['Xr']
-				target_r = np.zeros([self.Nr,1])
+				target_r = npzfile['target_r']
 			else:
 				self.Xr_tf = None
+
 		else:
 			np.random.seed(10)
 
-
-			if app_str == "_SD_rand2_POD_100_33":
-				disN = 33
-				self.Xf = np.array([])
-				target_f = np.array([])
-				self.Xb_d = np.array([])
-				self.ub_d = np.array([])
-				epsfile = self.path_env+"CD_2D_{0}{1}.npy".format(100,"_SD_rand2")
-				self.mu_mat_train = np.load(epsfile).flatten()
-				x = np.linspace(self.domain[0,0],self.domain[0,1],num=disN)
-				y = np.linspace(self.domain[1,0],self.domain[1,1],num=disN)
-
-				X, Y = np.meshgrid(x,y)
-				X_in = X[1:-1,1:-1]
-				Y_in = Y[1:-1,1:-1]
-				X_in_vec = np.reshape(X_in, [(disN-2)**2,1])
-				Y_in_vec = np.reshape(Y_in, [(disN-2)**2,1])
-
-				X_lb = X[1:-1,0].reshape([disN-2,1])
-				X_rb = X[1:-1,-1].reshape([disN-2,1])
-				X_tb = X[-1,::].reshape([disN,1])
-				X_db = X[0,::].reshape([disN,1])
-				Y_lb = Y[1:-1,0].reshape([disN-2,1])
-				Y_rb = Y[1:-1,-1].reshape([disN-2,1])
-				Y_tb = Y[-1,::].reshape([disN,1])
-				Y_db = Y[0,::].reshape([disN,1])
-				posinds = X_db>=0
-				u_lb = np.zeros((disN-2,1))
-				u_rb = np.ones((disN-2,1))
-				u_tb = np.zeros((disN,1))
-				u_db = np.zeros((disN,1))
-				u_db[posinds] = 1
-
-				xbd = np.vstack((X_lb,X_rb,X_tb,X_db))
-				ybd = np.vstack((Y_lb,Y_rb,Y_tb,Y_db))
-				ubd = np.vstack((u_lb,u_rb,u_tb,u_db))
-				xb_d = np.hstack((xbd,ybd))
-
-				for i in range(len(self.mu_mat_train)):
-					p = self.mu_mat_train[i]
-					pvec = np.ones([(disN-2)**2,1])*p
-					xf = np.hstack((X_in_vec,Y_in_vec,pvec))
-					self.Xf = np.vstack((self.Xf,xf)) if self.Xf.size else xf
-					target_f = np.vstack((target_f,np.zeros([(disN-2)**2,1]))) if target_f.size else np.zeros([(disN-2)**2,1])
-
-					pbdvec = np.ones([(disN-1)*4,1])*p
-					xb_d_block = np.hstack((xb_d,pbdvec))
-					self.Xb_d = np.vstack((self.Xb_d,xb_d_block)) if self.Xb_d.size else xb_d_block
-					self.ub_d = np.vstack((self.ub_d,ubd)) if self.ub_d.size else ubd
-
-			elif app_str == "_SD_rand2_POD_100_33_altbc":
-				disN = 33
-				self.Xf = np.array([])
-				target_f = np.array([])
-				self.Xb_d = np.array([])
-				self.ub_d = np.array([])
-				epsfile = self.path_env+"CD_2D_{0}{1}.npy".format(100,"_SD_rand2")
-				self.mu_mat_train = np.load(epsfile).flatten()
-				x = np.linspace(self.domain[0,0],self.domain[0,1],num=disN)
-				y = np.linspace(self.domain[1,0],self.domain[1,1],num=disN)
-
-				X, Y = np.meshgrid(x,y)
-				X_in = X[1:-1,1:-1]
-				Y_in = Y[1:-1,1:-1]
-				X_in_vec = np.reshape(X_in, [(disN-2)**2,1])
-				Y_in_vec = np.reshape(Y_in, [(disN-2)**2,1])
-
-				X_lb = X[::,0].reshape([disN,1])
-				X_rb = X[::,-1].reshape([disN,1])
-				X_tb = X[-1,1:-1].reshape([disN-2,1])
-				X_db = X[0,1:-1].reshape([disN-2,1])
-				Y_lb = Y[::,0].reshape([disN,1])
-				Y_rb = Y[::,-1].reshape([disN,1])
-				Y_tb = Y[-1,1:-1].reshape([disN-2,1])
-				Y_db = Y[0,1:-1].reshape([disN-2,1])
-				posinds = X_db>=0
-				u_lb = np.zeros((disN,1))
-				u_rb = np.ones((disN,1))
-				u_tb = np.zeros((disN-2,1))
-				u_db = np.zeros((disN-2,1))
-				u_db[posinds] = 1
-
-				xbd = np.vstack((X_lb,X_rb,X_tb,X_db))
-				ybd = np.vstack((Y_lb,Y_rb,Y_tb,Y_db))
-				ubd = np.vstack((u_lb,u_rb,u_tb,u_db))
-				xb_d = np.hstack((xbd,ybd))
-
-				for i in range(len(self.mu_mat_train)):
-					p = self.mu_mat_train[i]
-					pvec = np.ones([(disN-2)**2,1])*p
-					xf = np.hstack((X_in_vec,Y_in_vec,pvec))
-					self.Xf = np.vstack((self.Xf,xf)) if self.Xf.size else xf
-					target_f = np.vstack((target_f,np.zeros([(disN-2)**2,1]))) if target_f.size else np.zeros([(disN-2)**2,1])
-
-					pbdvec = np.ones([(disN-1)*4,1])*p
-					xb_d_block = np.hstack((xb_d,pbdvec))
-					self.Xb_d = np.vstack((self.Xb_d,xb_d_block)) if self.Xb_d.size else xb_d_block
-					self.ub_d = np.vstack((self.ub_d,ubd)) if self.ub_d.size else ubd
-
-
-			elif app_str == "_SD_rand2_POD_100_17":
-				disN = 17
-				self.Xf = np.array([])
-				target_f = np.array([])
-				self.Xb_d = np.array([])
-				self.ub_d = np.array([])
-				epsfile = self.path_env+"CD_2D_{0}{1}.npy".format(100,"_SD_rand2")
-				self.mu_mat_train = np.load(epsfile).flatten()
-				x = np.linspace(self.domain[0,0],self.domain[0,1],num=disN)
-				y = np.linspace(self.domain[1,0],self.domain[1,1],num=disN)
-
-				X, Y = np.meshgrid(x,y)
-				X_in = X[1:-1,1:-1]
-				Y_in = Y[1:-1,1:-1]
-				X_in_vec = np.reshape(X_in, [(disN-2)**2,1])
-				Y_in_vec = np.reshape(Y_in, [(disN-2)**2,1])
-
-				X_lb = X[1:-1,0].reshape([disN-2,1])
-				X_rb = X[1:-1,-1].reshape([disN-2,1])
-				X_tb = X[-1,::].reshape([disN,1])
-				X_db = X[0,::].reshape([disN,1])
-				Y_lb = Y[1:-1,0].reshape([disN-2,1])
-				Y_rb = Y[1:-1,-1].reshape([disN-2,1])
-				Y_tb = Y[-1,::].reshape([disN,1])
-				Y_db = Y[0,::].reshape([disN,1])
-				posinds = X_db>=0
-				u_lb = np.zeros((disN-2,1))
-				u_rb = np.ones((disN-2,1))
-				u_tb = np.zeros((disN,1))
-				u_db = np.zeros((disN,1))
-				u_db[posinds] = 1
-
-				xbd = np.vstack((X_lb,X_rb,X_tb,X_db))
-				ybd = np.vstack((Y_lb,Y_rb,Y_tb,Y_db))
-				ubd = np.vstack((u_lb,u_rb,u_tb,u_db))
-				xb_d = np.hstack((xbd,ybd))
-
-				for i in range(len(self.mu_mat_train)):
-					p = self.mu_mat_train[i]
-					pvec = np.ones([(disN-2)**2,1])*p
-					xf = np.hstack((X_in_vec,Y_in_vec,pvec))
-					self.Xf = np.vstack((self.Xf,xf)) if self.Xf.size else xf
-					target_f = np.vstack((target_f,np.zeros([(disN-2)**2,1]))) if target_f.size else np.zeros([(disN-2)**2,1])
-
-					pbdvec = np.ones([(disN-1)*4,1])*p
-					xb_d_block = np.hstack((xb_d,pbdvec))
-					self.Xb_d = np.vstack((self.Xb_d,xb_d_block)) if self.Xb_d.size else xb_d_block
-					self.ub_d = np.vstack((self.ub_d,ubd)) if self.ub_d.size else ubd
-
-			elif app_str == "_finemesh":
-				sampling_f = LHS(xlimits = np.array([[-1,1],[-1,1]]))
-				self.Xf = sampling_f(self.Nf)
-				sampling_fe = LHS(xlimits = np.array([[-4,0]]))
-				xfe = sampling_fe(self.Nf)
-				xfe = np.power(10, xfe).reshape([self.Nf,1])
-				self.Xf = np.hstack((self.Xf,xfe))
-				target_f = np.zeros([self.Nf,1])
-
-				sampling_b = LHS(xlimits = np.array([[-1, 1], [-4, 0]]))
-				Nb_side = self.Nb//4
-				x_p_b = sampling_b(Nb_side)
-
-				pb = x_p_b[:,[1]]
-				pb_10= np.power(10, pb)
-				xyb = x_p_b[:,[0]]
-				posinds = xyb>=0
-				neginds = xyb<0
-
-				lb = np.concatenate((-np.ones((Nb_side,1)),xyb,pb_10),axis = 1)
-				ulb = np.zeros((Nb_side,1))
-				rb = np.concatenate((np.ones([Nb_side,1]),xyb,pb_10),axis = 1)
-				urb = np.ones((Nb_side,1))
-				tb = np.concatenate((xyb,np.ones((Nb_side,1)),pb_10),axis = 1)
-				utb = np.zeros((Nb_side,1))
-				db = np.concatenate((xyb,-np.ones((Nb_side,1)),pb_10),axis = 1)
-				udb = np.zeros((Nb_side,1))
-				udb[posinds] = 1
-
-
-				self.Xb_d = np.concatenate((lb,rb,tb,db),axis = 0)
-				self.ub_d = np.concatenate((ulb,urb,utb,udb),axis = 0)
-
+			# sampling_f = LHS(xlimits = np.array([[-1, 1], [-1, 1], [-4, 0]]))
+			sampling_f = LHS(xlimits = self.x_p_domain)
+			self.Xf = sampling_f(self.Nf)
+			self.Xf[:,2] = np.power(10, self.Xf[:,2])
+			if app_str == "_altsol":
+				w1 = 1-self.Xf[:,[0]]**2
 			else:
-				# sampling_f = LHS(xlimits = np.array([[-1, 1], [-1, 1], [-4, 0]]))
-				sampling_f = LHS(xlimits = self.x_p_domain)
-				self.Xf = sampling_f(self.Nf)
-				self.Xf[:,2] = np.power(10, self.Xf[:,2])
-				target_f = np.zeros([self.Nf,1])
+				w1 = 1-self.Xf[:,[1]]**2
+			w2 = 0*self.Xf[:,[1]]
+			self.Xf = np.concatenate((self.Xf,w1,w2),axis = 1)
+			if app_str == "_random":
+				target_f = np.random.rand(self.Nf,2)
+			else:
+				target_f = np.zeros((self.Nf,2))
+				target_f[:,0] = 2*self.Xf[:,2]
 
-				sampling_b = LHS(xlimits = np.array([[-1, 1], [-4, 0]]))
-				Nb_side = self.Nb//4
-				x_p_b = sampling_b(Nb_side)
+			sampling_b = LHS(xlimits = np.array([[-1, 1], [-4, 0]]))
+			Nb_side = self.Nb//3
+			x_p_b = sampling_b(Nb_side)
 
-				pb = x_p_b[:,[1]]
-				pb_10= np.power(10, pb)
-				xyb = x_p_b[:,[0]]
-				posinds = xyb>=0
-				neginds = xyb<0
+			pb = x_p_b[:,[1]]
+			pb_10= np.power(10, pb)
+			xyb = x_p_b[:,[0]]
 
-				lb = np.concatenate((-np.ones((Nb_side,1)),xyb,pb_10),axis = 1)
-				ulb = np.zeros((Nb_side,1))
-				rb = np.concatenate((np.ones([Nb_side,1]),xyb,pb_10),axis = 1)
-				urb = np.ones((Nb_side,1))
-				tb = np.concatenate((xyb,np.ones((Nb_side,1)),pb_10),axis = 1)
-				utb = np.zeros((Nb_side,1))
-				db = np.concatenate((xyb,-np.ones((Nb_side,1)),pb_10),axis = 1)
-				udb = np.zeros((Nb_side,1))
-				udb[posinds] = 1
+			if app_str == "_altsol":
+				lb = np.concatenate((-np.ones((Nb_side,1)),xyb,pb_10,np.zeros((Nb_side,1)),np.zeros((Nb_side,1))),axis = 1)
+				ulb = np.zeros((Nb_side,2))
+				rb = np.concatenate((np.ones((Nb_side,1)),xyb,pb_10,np.zeros((Nb_side,1)),np.zeros((Nb_side,1))),axis = 1)
+				urb = np.zeros((Nb_side,2))
+				tb = np.concatenate((xyb,np.ones((Nb_side,1)),pb_10,1-xyb**2,np.zeros((Nb_side,1))),axis = 1)
+				utb = np.zeros((Nb_side,2))
+				db = np.concatenate((xyb,-np.ones((Nb_side,1)),pb_10,1-xyb**2,np.zeros((Nb_side,1))),axis = 1)
+				udb = np.zeros((Nb_side,2))
+			else:
+				lb = np.concatenate((-np.ones((Nb_side,1)),xyb,pb_10,1-xyb**2,np.zeros((Nb_side,1))),axis = 1)
+				ulb = np.zeros((Nb_side,2))
+				# rb = np.concatenate((np.ones([Nb_side,1]),xyb,pb_10,1-xyb**2,np.zeros((Nb_side,1))),axis = 1)
+				# urb = np.zeros((Nb_side,2))
+				tb = np.concatenate((xyb,np.ones((Nb_side,1)),pb_10,np.zeros((Nb_side,1)),np.zeros((Nb_side,1))),axis = 1)
+				utb = np.zeros((Nb_side,2))
+				db = np.concatenate((xyb,-np.ones((Nb_side,1)),pb_10,np.zeros((Nb_side,1)),np.zeros((Nb_side,1))),axis = 1)
+				udb = np.zeros((Nb_side,2))
 
+			# self.Xb_d = np.concatenate((lb,rb,tb,db),axis = 0)
+			# self.ub_d = np.concatenate((ulb,urb,utb,udb),axis = 0)
 
-				self.Xb_d = np.concatenate((lb,rb,tb,db),axis = 0)
-				self.ub_d = np.concatenate((ulb,urb,utb,udb),axis = 0)
+			self.Xb_d = np.concatenate((lb,tb,db),axis = 0)
+			self.ub_d = np.concatenate((ulb,utb,udb),axis = 0)
+
+			if self.Nn>0:
+				sampling_n = LHS(xlimits = np.array([[-1, 1], [-4, 0]]))
+				x_p_n = sampling_n(self.Nn)
+
+				pn = x_p_n[:,[1]]
+				pn_10= np.power(10, pn)
+				xyn = x_p_n[:,[0]]
+				if app_str == "_altsol":
+					rb = np.concatenate((np.ones([self.Nn,1]),xyn,pn_10,np.zeros((self.Nn,1)),np.zeros((self.Nn,1))),axis = 1)
+				else:
+					rb = np.concatenate((np.ones([self.Nn,1]),xyn,pn_10,1-xyn**2,np.zeros((self.Nn,1))),axis = 1)
+
+				urb = np.zeros((self.Nn,2))
+				# if app_str == "_altneumann":
+				# 	pass 
+				# else:
+				# 	urb[:, [0]] = -2*pn_10*np.ones([self.Nn,1])
+				
+				self.Xn = rb 
+				self.un = urb
+			else:
+				self.Xn = None 
+				self.un = None 
 
 			if self.Nr>0:
 				sampling_r = LHS(xlimits = self.x_p_domain)
 				self.Xr = sampling_f(self.Nr)
 				self.Xr[:,2] = np.power(10, self.Xr[:,2])
-				target_r = np.zeros([self.Nr,1])
+				if app_str == "_altsol":
+					w1 = 1-self.Xr[:,[0]]**2
+				else:
+					w1 = 1-self.Xr[:,[1]]**2
+				w2 = 0*self.Xf[:,[1]]
+				self.Xr = np.concatenate((self.Xr,w1,w2),axis = 1)
+				target_r = np.zeros((self.Nr,1))
+
 			else:
 				self.Xr = None
+				target_r = None
 
-			if self.N0>0:
-				sampling_0 = LHS(xlimits = self.x_p_domain)
-				x = sampling_0(self.N0)
-				x[:,2] = np.power(10, x[:,2])
+			np.savez(self.path_env+"{0}".format(filename), Xf = self.Xf, target_f = target_f, Xb_d = self.Xb_d, ub_d = self.ub_d, Xn = self.Xn, un = self.un, Xr = self.Xr, target_r = target_r)
+			# if self.N0>0:
+			# 	sampling_0 = LHS(xlimits = self.x_p_domain)
+			# 	x = sampling_0(self.N0)
+			# 	x[:,2] = np.power(10, x[:,2])
 
-				str_arr = app_str.split("_")
-				if len(str_arr)==3:
-					setting_str = str_arr[1]
-					setting_para_str = str_arr[2]
-					setting_para_str = setting_para_str.replace("p",".")
-					setting = int(setting_str)
-					setting_para = float(setting_para_str)
-				else:
-					setting = 0
-				# setting 1
-				if setting == 1:
-					x[:,0] = x[:,1]*x[:,0]+1-x[:,1]
-				# setting 2
-				elif setting == 2:
-					x[:,0] = setting_para*x[:,1]*x[:,0]+1-setting_para*x[:,1]
-					x[:,0] = np.maximum(0.001*np.ones(np.shape(x[:,0])),x[:,0])
-				# setting 3
-				elif setting == 3:
-					percent = setting_para/100
-					in_corner_int = int(percent*self.N0)
-					out_corner_int = self.N0-in_corner_int
-					N0_sel = np.random.choice(self.N0,in_corner_int, replace=False)
-					N0_sel_diff = np.array([i for i in range(self.N0) if (i not in N0_sel)])
-					N0_sel = N0_sel.reshape([in_corner_int,1])
-					N0_sel_diff = N0_sel_diff.reshape([out_corner_int,1])
-					x[N0_sel,0] = x[N0_sel,1]*x[N0_sel,0]+1-x[N0_sel,1]
-					x[N0_sel_diff,0] = (1-x[N0_sel_diff,1])*x[N0_sel_diff,0]
+			# 	str_arr = app_str.split("_")
+			# 	if len(str_arr)==3:
+			# 		setting_str = str_arr[1]
+			# 		setting_para_str = str_arr[2]
+			# 		setting_para_str = setting_para_str.replace("p",".")
+			# 		setting = int(setting_str)
+			# 		setting_para = float(setting_para_str)
+			# 	else:
+			# 		setting = 0
+			# 	# setting 1
+			# 	if setting == 1:
+			# 		x[:,0] = x[:,1]*x[:,0]+1-x[:,1]
+			# 	# setting 2
+			# 	elif setting == 2:
+			# 		x[:,0] = setting_para*x[:,1]*x[:,0]+1-setting_para*x[:,1]
+			# 		x[:,0] = np.maximum(0.001*np.ones(np.shape(x[:,0])),x[:,0])
+			# 	# setting 3
+			# 	elif setting == 3:
+			# 		percent = setting_para/100
+			# 		in_corner_int = int(percent*self.N0)
+			# 		out_corner_int = self.N0-in_corner_int
+			# 		N0_sel = np.random.choice(self.N0,in_corner_int, replace=False)
+			# 		N0_sel_diff = np.array([i for i in range(self.N0) if (i not in N0_sel)])
+			# 		N0_sel = N0_sel.reshape([in_corner_int,1])
+			# 		N0_sel_diff = N0_sel_diff.reshape([out_corner_int,1])
+			# 		x[N0_sel,0] = x[N0_sel,1]*x[N0_sel,0]+1-x[N0_sel,1]
+			# 		x[N0_sel_diff,0] = (1-x[N0_sel_diff,1])*x[N0_sel_diff,0]
 
-				# self.X0 = np.concatenate((x,1e-4*np.ones((self.N0,1))),axis = 1)
-				self.X0 = x
-				if app_str == "_reduced":
-					leftinds = self.X0[:,1]+np.sqrt(3)*self.X0[:,0]<-1
-					self.u0 = np.ones((self.N0,1))
-					self.u0[leftinds] = 0
-				else:
-					self.u0 = self.u_exact(self.X0)
-				np.savez(self.path_env+"{0}".format(filename), Xf = self.Xf, Xb_d = self.Xb_d, ub_d = self.ub_d, X0 = self.X0, u0 = self.u0, Xr = self.Xr)
-			else:
-				np.savez(self.path_env+"{0}".format(filename), Xf = self.Xf, Xb_d = self.Xb_d, ub_d = self.ub_d,Xr = self.Xr)
+			# 	# self.X0 = np.concatenate((x,1e-4*np.ones((self.N0,1))),axis = 1)
+			# 	self.X0 = x
+			# 	if app_str == "_reduced":
+			# 		leftinds = self.X0[:,1]+np.sqrt(3)*self.X0[:,0]<-1
+			# 		self.u0 = np.ones((self.N0,1))
+			# 		self.u0[leftinds] = 0
+			# 	else:
+			# 		self.u0 = self.u_exact(self.X0)
+			# 	np.savez(self.path_env+"{0}".format(filename), Xf = self.Xf, Xb_d = self.Xb_d, ub_d = self.ub_d, X0 = self.X0, u0 = self.u0, Xr = self.Xr)
 		
 		if self.Nf>0:
 			t_tf = tf.constant((),shape = (self.Nf,0),dtype = tf.float32)
 			x_tf = tf.constant(self.Xf[:,[0]],dtype = tf.float32)
 			y_tf = tf.constant(self.Xf[:,[1]],dtype = tf.float32)
 			xi_tf = tf.constant(self.Xf[:,[2]],dtype = tf.float32)
+			w1_tf = tf.constant(self.Xf[:,[3]],dtype = tf.float32)
+			w2_tf = tf.constant(self.Xf[:,[4]],dtype = tf.float32)
 			target_tf = tf.constant(target_f, dtype = tf.float32)
 			N = tf.constant(self.Nf, dtype = tf.float32)
+
 			weight = tf.constant(self.type_weighting[0], dtype = tf.float32)
-			self.Xf_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'Res', 'weight':weight}
+			self.Xf_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'w1_tf':w1_tf, 'w2_tf':w2_tf, 'target':target_tf, 'N':N, 'type':'Res', 'weight':weight}
 			samples_list.append(self.Xf_dict)
 
 		if self.Nb>0:
@@ -670,11 +555,26 @@ class CD_2D_12:
 			x_tf = tf.constant(self.Xb_d[:,[0]],dtype = tf.float32)
 			y_tf = tf.constant(self.Xb_d[:,[1]],dtype = tf.float32)
 			xi_tf = tf.constant(self.Xb_d[:,[2]],dtype = tf.float32)
+			w1_tf = tf.constant(self.Xb_d[:,[3]],dtype = tf.float32)
+			w2_tf = tf.constant(self.Xb_d[:,[4]],dtype = tf.float32)
 			target_tf = tf.constant(self.ub_d, dtype = tf.float32)
 			N = tf.constant(self.Nb, dtype = tf.float32)
 			weight = tf.constant(self.type_weighting[1], dtype = tf.float32)
-			self.Xb_d_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'B_D', 'weight':weight}
+			self.Xb_d_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'w1_tf':w1_tf, 'w2_tf':w2_tf, 'target':target_tf, 'N':N, 'type':'B_D', 'weight':weight}
 			samples_list.append(self.Xb_d_dict)
+
+		if self.Nn>0:
+			t_tf = tf.constant((),shape = (self.Nn,0),dtype = tf.float32)
+			x_tf = tf.constant(self.Xn[:,[0]],dtype = tf.float32)
+			y_tf = tf.constant(self.Xn[:,[1]],dtype = tf.float32)
+			xi_tf = tf.constant(self.Xn[:,[2]],dtype = tf.float32)
+			w1_tf = tf.constant(self.Xn[:,[3]],dtype = tf.float32)
+			w2_tf = tf.constant(self.Xn[:,[4]],dtype = tf.float32)
+			target_tf = tf.constant(self.un, dtype = tf.float32)
+			N = tf.constant(self.Nn, dtype = tf.float32)
+			weight = tf.constant(self.type_weighting[2], dtype = tf.float32)
+			self.Xb_n_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'w1_tf':w1_tf, 'w2_tf':w2_tf, 'target':target_tf, 'N':N, 'type':'B_N', 'weight':weight}
+			samples_list.append(self.Xb_n_dict)
 
 		if self.N0>0:
 			#check number of samples in (1-xi,1) corner
@@ -688,26 +588,29 @@ class CD_2D_12:
 			# ax.plot(xs,xis, 'o')
 			# plt.show()
 
-			y_tf = tf.constant(self.X0[:,[1]],dtype = tf.float32)
-			t_tf = tf.constant((),shape = (self.N0,0),dtype = tf.float32)
-			x_tf = tf.constant(self.X0[:,[0]],dtype = tf.float32)
-			xi_tf = tf.constant(self.X0[:,[2]],dtype = tf.float32)
-			target_tf = tf.constant(self.u0, dtype = tf.float32)
-			N = tf.constant(self.N0, dtype = tf.float32)
-			weight = tf.constant(self.type_weighting[3], dtype = tf.float32)
-			self.X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':"Init", 'weight':weight}
-			samples_list.append(self.X0_dict)
-
+			# y_tf = tf.constant(self.X0[:,[1]],dtype = tf.float32)
+			# t_tf = tf.constant((),shape = (self.N0,0),dtype = tf.float32)
+			# x_tf = tf.constant(self.X0[:,[0]],dtype = tf.float32)
+			# xi_tf = tf.constant(self.X0[:,[2]],dtype = tf.float32)
+			# target_tf = tf.constant(self.u0, dtype = tf.float32)
+			# N = tf.constant(self.N0, dtype = tf.float32)
+			# weight = tf.constant(self.type_weighting[3], dtype = tf.float32)
+			# self.X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':"Init", 'weight':weight}
+			# samples_list.append(self.X0_dict)
+			pass
 		if self.Nr>0:
 			t_tf = tf.constant((),shape = (self.Nr,0),dtype = tf.float32)
 			x_tf = tf.constant(self.Xr[:,[0]],dtype = tf.float32)
 			y_tf = tf.constant(self.Xr[:,[1]],dtype = tf.float32)
 			xi_tf = tf.constant(self.Xr[:,[2]],dtype = tf.float32)
+			w1_tf = tf.constant(self.Xr[:,[3]],dtype = tf.float32)
+			w2_tf = tf.constant(self.Xr[:,[4]],dtype = tf.float32)
 			target_tf = tf.constant(target_r, dtype = tf.float32)
 			N = tf.constant(self.Nr, dtype = tf.float32)
 			weight = tf.constant(self.type_weighting[4], dtype = tf.float32)
-			self.Xr_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':'Reduced', 'weight':weight}
+			self.Xr_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'w1_tf':w1_tf, 'w2_tf':w2_tf, 'target':target_tf, 'N':N, 'type':'Div', 'weight':weight}
 			samples_list.append(self.Xr_dict)
+			# pass
 
 		return samples_list
 
@@ -717,33 +620,36 @@ class CD_2D_12:
 		x_tf = tf.constant(self.N0_tests[:,[0]],dtype = tf.float32)
 		y_tf = tf.constant(self.N0_tests[:,[1]],dtype = tf.float32)
 		xi_tf = tf.constant(self.N0_tests[:,[2]],dtype = tf.float32)
+		w1_tf = tf.constant(self.N0_tests[:,[3]],dtype = tf.float32)
+		w2_tf = tf.constant(self.N0_tests[:,[4]],dtype = tf.float32)
 		target_tf = tf.constant(self.u0_tests, dtype = tf.float32)
 		N = tf.constant(N, dtype = tf.float32)
-		weight = tf.constant(self.type_weighting[3], dtype = tf.float32)
-		X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'target':target_tf, 'N':N, 'type':"Init", 'weight':weight}
+		weight = tf.constant(1, dtype = tf.float32)
+		X0_dict = {'x_tf':x_tf, 'y_tf':y_tf, 't_tf':t_tf, 'xi_tf':xi_tf, 'w1_tf':w1_tf, 'w2_tf':w2_tf, 'target':target_tf, 'N':N, 'type':"Init", 'weight':weight}
 		return X0_dict, target_tf
 
 	@tf.function
-	def f_res(self, x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy, u_xy):
-		f_u = -xi_tf*u_xx-xi_tf*u_yy-u_x/2+tf.math.sqrt(3.0)/2*u_y
-		# f_u = (-xi_tf)*(u_xx+u_yy)-u_x/2+tf.math.sqrt(3.0)/2*u_y+0.005*(u_xx/4+3*u_yy/4-tf.math.sqrt(3.0)/2*u_xy)
-		# f_u = (-u_xx*xi_tf+u_x-1)/xi_tf
-		return f_u
+	def f_res(self, x_tf, y_tf, t_tf, xi_tf, w1_tf, w2_tf, u1, u2, u1_x, u1_y, u1_t, u1_xx, u1_yy, u1_xy, u2_x, u2_y, u2_t, u2_xx, u2_yy, u2_xy):
+		f_u1 = -xi_tf*(u1_xx+u1_yy)+w1_tf*u1_x+w2_tf*u1_y+u1_xx+u2_xy
+		f_u2 = -xi_tf*(u2_xx+u2_yy)+w1_tf*u2_x+w2_tf*u2_y+u2_yy+u1_xy
+		return f_u1, f_u2
 
 	@tf.function 
-	def lhs_res(self, x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy, u_xy):
-		f_u = -xi_tf*u_xx-xi_tf*u_yy-u_x/2+tf.math.sqrt(3.0)/2*u_y
-		return f_u
+	def lhs_res(self, x_tf, y_tf, t_tf, xi_tf, w1_tf, w2_tf, u, u1_x, u1_y, u1_t, u1_xx, u1_yy, u1_xy, u2_x, u2_y, u2_t, u2_xx, u2_yy, u2_xy):
+		pass
+		# f_u = -xi_tf*u_xx-xi_tf*u_yy-u_x/2+tf.math.sqrt(3.0)/2*u_y
+		# return f_u
 
 	@tf.function
-	def f_reduced_res(self, x_tf, y_tf, t_tf, xi_tf, u, u_x, u_y, u_t, u_xx, u_yy, u_xy):
-		f_u = -u_x/2+tf.math.sqrt(3.0)/2*u_y
+	def f_reduced_res(self, x_tf, y_tf, t_tf, xi_tf, w1_tf, w2_tf, u1, u2, u1_x, u1_y, u1_t, u1_xx, u1_yy, u1_xy, u2_x, u2_y, u2_t, u2_xx, u2_yy, u2_xy):
+		pass
+		# f_u = -u_x/2+tf.math.sqrt(3.0)/2*u_y
 		# f_u = (-u_xx*xi_tf+u_x-1)/xi_tf
-		return f_u
+		# return f_u
 
 	@tf.function
-	def neumann_bc(self, x_tf, y_tf, t_tf, xi_tf, u_x, u_y):
-		return
+	def neumann_bc(self, x_tf, y_tf, t_tf, xi_tf, w1_tf, w2_tf, u1_x, u1_y, u2_x, u2_y):
+		return xi_tf*u1_x, u2_x
 
 	def test_NN(self, net, record_path = None,save_name = None):
 		
@@ -759,14 +665,21 @@ class CD_2D_12:
 					record_writer.writerow(fields)
 
 		X0_dict, u_test = self.u_exact_test(self.app_str)
+		u1_test,u2_test = tf.split(u_test,2,axis=1)
 		x_tf = X0_dict["x_tf"]
 		y_tf = X0_dict["y_tf"]
 		t_tf = X0_dict["t_tf"]
 		xi_tf = X0_dict["xi_tf"]
-		
+		w1_tf = X0_dict["w1_tf"]
+		w2_tf = X0_dict["w2_tf"]
+		u1_test_p,u2_test_p = net.forward(x_tf, y_tf, t_tf, xi_tf, w1_tf, w2_tf)
+		train_sample_list = self.generate_PINN_samples(self.app_str)
+		print(net.loss([X0_dict]))
+		print(net.loss(train_sample_list))
+		input()
+
 		if self.sampling_method == 3:
 			net.h_init = tf.constant(self.h_init,dtype = tf.float32)
-		u_test_p = net.forward(x_tf, y_tf, t_tf, xi_tf)
 		if self.sampling_method == 0:
 			u_test_p = u_test_p.numpy()
 			self.V = np.load(self.path_env+"{2}_{1}{3}_V_{0}.npy".format(self.L, self.N_p_train, self.name, self.app_str))
@@ -792,12 +705,50 @@ class CD_2D_12:
 
 
 		elif self.sampling_method == 1 or self.sampling_method == 2:
-			target_f = tf.zeros([self.N*self.N*self.N_p_test,1])
-			f_res = net.compute_residual(x_tf, y_tf, t_tf, xi_tf, target_f)
+			target_f = tf.zeros([self.N*self.N*self.N_p_test,2])
+			u1, u2, u1_x, u1_y, u1_t, u1_xx, u1_yy, u1_xy, u2_x, u2_y, u2_t, u2_xx, u2_yy, u2_xy = net.derivatives(x_tf, y_tf, t_tf, xi_tf, w1_tf, w2_tf)
+			f1_res,f2_res = self.f_res(x_tf, y_tf, t_tf, xi_tf, w1_tf, w2_tf, u1, u2, u1_x, u1_y, u1_t, u1_xx, u1_yy, u1_xy, u2_x, u2_y, u2_t, u2_xx, u2_yy, u2_xy)
+			f1_res_err = f1_res-2*xi_tf
+			f2_res_err = f2_res
+			# f_res = net.compute_residual(x_tf, y_tf, t_tf, xi_tf,w1_tf,w2_tf, target_f)
+			# f1_res,f2_res = tf.split(f_res,2,axis=1)
 			N_record = [self.Nf, self.Nb, self.Nn, self.N0]
-			u_test_grid = tf.reshape(tf.transpose(u_test),(self.N_p_test,self.N,self.N))
-			u_test_p_grid = tf.reshape(u_test_p,(self.N_p_test,self.N,self.N))
-			f_res_grid = tf.reshape(f_res, (self.N_p_test,self.N,self.N))
+			u1_test_grid = tf.reshape(tf.transpose(u1_test),(self.N_p_test,self.N,self.N))
+			u2_test_grid = tf.reshape(tf.transpose(u2_test),(self.N_p_test,self.N,self.N))
+			u1_test_p_grid = tf.reshape(u1_test_p,(self.N_p_test,self.N,self.N))
+			u2_test_p_grid = tf.reshape(u2_test_p,(self.N_p_test,self.N,self.N))
+			fres1_grid = tf.reshape(f1_res_err,(self.N_p_test,self.N,self.N))
+			fres2_grid = tf.reshape(f2_res_err,(self.N_p_test,self.N,self.N))
+			for i in range(0,self.N_p_test):
+				xi = self.mu_mat_test[0,i]
+				u1_test_p_i = u1_test_p_grid[i].numpy()
+				u2_test_p_i = u2_test_p_grid[i].numpy()
+				u1_test_i = u1_test_grid[i].numpy()
+				u2_test_i = u2_test_grid[i].numpy()
+				fres1_i = fres1_grid[i].numpy()
+				fres2_i = fres2_grid[i].numpy()
+				err1_i = u1_test_p_i-u1_test_i
+				err2_i = u2_test_p_i-u2_test_i
+				fig, ax = plt.subplots()
+				ax.quiver(self.X,self.Y,u1_test_p_i,u2_test_p_i)
+				ax.set_title(r"NN, $\epsilon$ = {0}".format(xi))
+				fig1, ax1 = plt.subplots()
+				ax1.quiver(self.X,self.Y,u1_test_i,u2_test_i)
+				ax1.set_title(r"Exact, $\epsilon$ = {0}".format(xi))
+				fig2, ax2 = plt.subplots()
+				ax2.quiver(self.X,self.Y,fres1_i,fres2_i)
+				ax2.set_title(r"Residual, $\epsilon$ = {0}".format(xi))
+				fig3, axs = plt.subplots(2)
+				cs1 = axs[0].contourf(self.X, self.Y, np.absolute(err1_i))
+				axs[0].set_title('u_x')
+				cs2 = axs[1].contourf(self.X, self.Y, np.absolute(err2_i))
+				axs[1].set_title('u_y')
+				fig3.colorbar(cs1, ax = axs[0])
+				fig3.colorbar(cs2, ax = axs[1])
+				plt.show()
+
+			f1_res_grid = tf.reshape(f1_res, (self.N_p_test,self.N,self.N))
+			f2_res_grid = tf.reshape(f2_res, (self.N_p_test,self.N,self.N))
 
 		if self.sampling_method == 3:
 			u_test_p = u_test_p.numpy()
